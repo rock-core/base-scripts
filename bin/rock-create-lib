@@ -1,0 +1,16 @@
+#! /bin/sh
+
+name=$1
+if test -z "$name"; then
+    echo "usage: rock-create-lib dirname"
+    exit 1
+fi
+if test -e "$name"; then
+    echo "$name already exists"
+    exit 1
+fi
+
+git clone git://gitorious.com/rock-base/template_cmake_lib.git $name
+cd $name
+./config.sh $name
+
