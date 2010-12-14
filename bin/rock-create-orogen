@@ -1,0 +1,23 @@
+#! /bin/sh
+
+name=$1
+if test -z "$name"; then
+    echo "usage: rock-create-orogen dirname"
+    exit 1
+fi
+if test -e "$name"; then
+    echo "$name already exists"
+    exit 1
+fi
+
+orogen create $name
+cd $name
+wget http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/manifest.xml
+
+
+echo
+echo "Please fill out $name/manifest.xml "
+echo
+echo "This is needed for autoproj to keep track of the dependencies and"
+echo "to tell other people what the orogen package is about."
+echo
