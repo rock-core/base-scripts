@@ -1,0 +1,27 @@
+#! /bin/sh
+
+set -e
+
+if ! test -f CMakeLists.txt; then
+    echo "this does not look like a Rock CMake library"
+    exit 1
+fi
+if ! grep -q rock_init CMakeLists.txt; then
+    echo "this does not look like a Rock CMake library"
+    exit 1
+fi
+
+if test -d "viz"; then
+    echo "the viz directory already exists"
+    exit 1
+fi
+
+if test -z "$ROCK_TEMPLATE_PREFIX"; then
+    ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock/template_
+    ROCK_TEMPLATE_SUFFIX=.git
+fi
+git clone ${ROCK_TEMPLATE_PREFIX}vizkit${ROCK_TEMPLATE_SUFFIX} viz
+
+cd viz
+./config.sh
+
