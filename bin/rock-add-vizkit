@@ -22,6 +22,8 @@ if test -z "$ROCK_TEMPLATE_PREFIX"; then
 fi
 git clone ${ROCK_TEMPLATE_PREFIX}vizkit${ROCK_TEMPLATE_SUFFIX} viz
 
-cd viz
-./config.sh
+if ! (cd viz ; ./config.sh); then
+    echo "vizkit plugin creation failed, deleting the viz/ directory"
+    rm -rf viz
+fi
 
