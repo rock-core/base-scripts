@@ -1,0 +1,22 @@
+#! /bin/sh
+
+set -e
+
+name=$1
+if test -z "$name"; then
+    echo "usage: rock-create-vizkit-widget dirname"
+    exit 1
+fi
+if test -e "$name"; then
+    echo "$name already exists"
+    exit 1
+fi
+
+if test -z "$ROCK_TEMPLATE_PREFIX"; then
+    ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock-base/template_
+    ROCK_TEMPLATE_SUFFIX=.git
+fi
+git clone ${ROCK_TEMPLATE_PREFIX}cmake_vizkit_widget${ROCK_TEMPLATE_SUFFIX} $name
+cd $name
+./config.sh
+
