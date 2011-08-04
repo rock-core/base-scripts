@@ -104,4 +104,13 @@ views = result.map do |item|
         Rock::TypeView.new(item) if view_types
     end
 end
-views.compact.uniq.sort_by{|t|t.name}.each{|t|pp t}
+
+result = views.compact.uniq.sort_by{|t|t.name}.each{|t|pp t}
+if result.empty?
+    puts "nothing was found for pattern = #{remaining}"
+    puts " search_filter deployments = #{search_filter[:deployments]}" if search_filter.has_key?(:deployments)
+    puts " search_filter tasks = #{search_filter[:tasks]}" if search_filter.has_key?(:tasks)
+    puts " search_filter ports = #{search_filter[:ports]}" if search_filter.has_key?(:ports)
+    puts " search_filter types = #{search_filter[:types]}" if search_filter.has_key?(:types)
+    puts " search_filter widgets = #{search_filter[:widgtes]}" if search_filter.has_key?(:widgtes)
+end
