@@ -1,0 +1,107 @@
+#! /usr/bin/env ruby
+
+require 'optparse'
+require File.join(File.dirname(__FILE__),'..','lib','rock','rock_inspect.rb')
+
+search_for = []
+search_filter = Hash.new
+view_ports =true 
+view_tasks =true 
+view_types =true 
+view_deployments =true
+view_widgets =true
+
+parser = OptionParser.new do |opt|
+    opt.banner = <<-EOT
+usage: rock-inspect <search term>"
+ Searches for <search term> in installed oroGen projects
+ and displays the definition of the matching objects
+ it searches for: task context, types and deployments
+
+       oroinspect -C deployment_name model_name
+ Runs the specified deployment and displays the configuration
+ of the task whose model is given. If the --save option is provided,
+ the resulting configuration is saved in the file, and under the
+ section name, provided to the option
+    EOT
+
+    opt.on('--help') do
+        puts self
+        exit 0
+    end
+    opt.on('-t', '--tasks TASK', 'if given, will filter out all items which are not related to TASK.') do |task|
+        search_filter[:tasks] = /#{task}/
+    end
+    opt.on('-T', '--types TYPES', 'if given, will filter out all items which are not related to TYPES.') do |type|
+        search_filter[:types] = /#{type}/
+    end
+    opt.on('-d', '--deployments DEPLOYMENTS', 'if given, will filter out all items which are not related to DEPLOYMENTS.') do |deployment|
+        search_filter[:deployments] = /#{deployment}/
+    end
+    opt.on('-P', '--ports PORTS', 'if given, will filter out all items which are not related to PORTS.') do |port|
+        search_filter[:ports] = /#{port}/
+    end
+
+    opt.on('-p', '--plugins PLUGINS', 'not implemented.') do |plugin|
+        search_filter[:plugins] = /#{plugin}/
+    end
+    opt.on('-w', '--widgets WIDGETS', 'not implemented') do |widget|
+        search_filter[:widgets] = /#{widget}/
+    end
+
+    opt.on('--only_types','if given, will only display types') do
+        view_ports = false 
+        view_tasks = false
+        view_deployments = false
+        view_widgets = false
+    end
+    opt.on('--only_ports') do
+        view_types = false 
+        view_tasks = false
+        view_deployments = false
+        view_widgets = false
+    end
+    opt.on('--only_tasks') do
+        view_types = false 
+        view_ports = false
+        view_deployments = false
+        view_widgets = false
+    end
+    opt.on('--only_deployments') do
+        view_types = false 
+        view_ports = false
+        view_tasks = false
+        view_widgets = false
+    end
+    opt.on('--only_widgets') do
+        view_types = false 
+        view_ports = false
+        view_tasks = false
+        view_deployments = false
+    end
+    opt.on('--debug') do
+        debug = true
+    end
+end
+
+remaining = parser.parse(ARGV)
+if remaining.empty? && search_filter.empty? 
+    puts parser
+    exit(1)
+end
+
+result = Rock::Inspect.find(remaining,search_filter)
+views = result.map do |item|
+    if(item.object.is_a?(Orocos::Spec::TaskContext))
+        Rock::TaskView.new(item) if view_tasks
+    elsif(item.object.is_a?(Orocos::Spec::Port))
+        Rock::PortView.new(item) if view_ports
+    elsif(item.object.is_a?(Orocos::Generation::Deployment))
+        Rock::DeploymentView.new(item) if view_deployments
+    elsif(item.object.is_a?(Qt::Widget))
+        Rock::WidgetView.new(item) if view_widgets
+    elsif(item.object.class.is_a?(Class) && item.object.respond_to?(:<=) && item.object <= Typelib::Type)
+        Rock::TypeView.new(item) if view_types
+    end
+end
+views.compact.uniq.sort_by{|t|t.name}.each{|t|pp t}
