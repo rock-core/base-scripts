@@ -59,7 +59,7 @@ module Rock
             #search for types
             #we are not searching for types all the time 
             if((filter.has_key?(:types) && filter.size == 1 && pattern.empty?) ||
-               (filter.empty? && !pattern.empty?))
+                !pattern.empty?)
                 reg = filter.has_key?(:types) ? filter[:types] : pattern
                 types = Rock::Inspect::find_types(/#{reg}/,filter)
             end
@@ -67,7 +67,7 @@ module Rock
             #search for ports
             if((!filter.has_key?(:deployments) && !filter.has_key?(:tasks) && 
                 (filter.has_key?(:ports)||filter.has_key?(:types)))|| 
-                (filter.empty? && !pattern.empty?))
+                !pattern.empty?)
                 reg = filter.has_key?(:ports) ? filter[:ports] : pattern
                 ports = Rock::Inspect::find_ports(/#{reg}/,filter)
             end
@@ -75,7 +75,7 @@ module Rock
             #search for tasks
             if((!filter.has_key?(:deployments) && 
                 (filter.has_key?(:tasks) || filter.has_key?(:ports) || filter.has_key?(:types))) || 
-                (filter.empty? && !pattern.empty?))
+                !pattern.empty?)
                 reg = filter.has_key?(:tasks) ? filter[:tasks] : pattern
                 tasks = Rock::Inspect::find_tasks(/#{reg}/, filter)
             end
@@ -85,7 +85,7 @@ module Rock
                filter.has_key?(:ports)  ||
                filter.has_key?(:tasks)  ||
                filter.has_key?(:types)  ||
-               (filter.empty? && !pattern.empty?))
+                !pattern.empty?)
                 reg = filter.has_key?(:deployments) ? filter[:deployments] : pattern
                 reg = /./ unless reg
                 deployments = Rock::Inspect::find_deployments(/#{reg}/,filter)
@@ -94,7 +94,7 @@ module Rock
             #search for widgets
             if((!filter.has_key?(:deployments) && !filter.has_key?(:tasks) &&
                 !filter.has_key?(:ports) && !filter.has_key?(:plugins)) ||
-                (filter.empty? && !pattern.empty?))
+                !pattern.empty?)
                 reg = filter.has_key?(:widgets) ? filter[:widgets] : pattern
                 widgets = Rock::Inspect::find_widgets(/#{reg}/, filter)
             end
@@ -105,6 +105,7 @@ module Rock
 
         def self.find_tasks(pattern,filter = Hash.new)
             found = []
+            return found if filter.has_key? :no_tasks
             #find all tasks which are matching the pattern
             Orocos.available_task_models.each do |name, project_name|
                 if name =~ pattern || project_name =~ pattern
@@ -123,6 +124,7 @@ module Rock
 
         def self.find_ports(pattern,filter = Hash.new)
             found = []
+            return found if filter.has_key? :no_ports
             #find all tasks which are matching the pattern
             Orocos.available_task_models.each do |name, project_name|
                 if tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
@@ -143,6 +145,7 @@ module Rock
 
         def self.find_types(pattern,filter = Hash.new)
             found = Array.new
+            return found if filter.has_key? :no_types
             Orocos.available_projects.each_key do |project_name|
                 seen = Set.new
                 next if !@master_project.has_typekit?(project_name)
@@ -171,6 +174,7 @@ module Rock
 
         def self.find_deployments(pattern,filter=Hash.new)
             found = []
+            return found if filter.has_key? :no_deployments
             Orocos.available_deployments.each do |name, pkg|
                 project_name = pkg.project_name
                 if name =~ pattern || project_name =~ pattern
@@ -194,6 +198,7 @@ module Rock
         end
         def self.find_widgets(pattern,filter=Hash.new)
             found = []
+            return found if filter.has_key? :no_widgets 
             widgtes = Vizkit.default_loader.available_widgets
             widgtes.each do |widget|
                 if widget_match?(widget,pattern,filter)
