@@ -12,7 +12,7 @@ def disable_all
     @search_filter[:no_deployments] = true
     @search_filter[:no_types] = true
     @search_filter[:no_widgets] = true
-    @search_filter[:no_logins] = true
+    @search_filter[:no_plugins] = true
 end
 
 parser = OptionParser.new do |opt|
