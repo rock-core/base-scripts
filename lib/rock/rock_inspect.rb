@@ -88,7 +88,6 @@ module Rock
                (filter.empty? && !pattern.empty?))
                 reg = filter.has_key?(:deployments) ? filter[:deployments] : pattern
                 reg = /./ unless reg
-                puts reg
                 deployments = Rock::Inspect::find_deployments(/#{reg}/,filter)
             end
 
