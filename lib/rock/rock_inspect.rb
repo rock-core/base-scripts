@@ -40,72 +40,72 @@ module Rock
         @master_project = Orocos::Generation::Project.new
 
         def self.load_orogen_project(master_project, name, debug)
-            master_project.load_orogen_project(name)
-        rescue Exception => e
-            if Rock::Inspect::debug
-                raise
+            begin
+                master_project.load_orogen_project(name)
+            rescue Exception => e
+                if Rock::Inspect::debug
+                    raise
+                end
+                STDERR.puts "WARN: cannot load the installed oroGen project #{name}"
+                STDERR.puts "WARN:     #{e.message}"
             end
-            STDERR.puts "WARN: cannot load the installed oroGen project #{name}"
-            STDERR.puts "WARN:     #{e.message}"
         end
 
         def self.find(pattern,filter = Hash.new)
-            tasks = Array.new
-            types = Array.new
-            deployments = Array.new
-            ports = Array.new
-            widgets = Array.new
+            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_widgets,:no_plugins])
+            result = Array.new
 
             #search for types
             #we are not searching for types all the time 
-            if((filter.has_key?(:types) && filter.size == 1 && pattern.empty?) ||
-                !pattern.empty?)
+            if !options.has_key? :no_types
                 reg = filter.has_key?(:types) ? filter[:types] : pattern
-                types = Rock::Inspect::find_types(/#{reg}/,filter)
+                reg = /./ unless reg
+                result += Rock::Inspect::find_types(/#{reg}/,filter)
             end
 
             #search for ports
-            if((!filter.has_key?(:deployments) && !filter.has_key?(:tasks) && 
-                (filter.has_key?(:ports)||filter.has_key?(:types)))|| 
-                !pattern.empty?)
+            if !options.has_key? :no_ports
                 reg = filter.has_key?(:ports) ? filter[:ports] : pattern
-                ports = Rock::Inspect::find_ports(/#{reg}/,filter)
+                reg = /./ unless reg
+                result += Rock::Inspect::find_ports(/#{reg}/,filter)
             end
 
             #search for tasks
-            if((!filter.has_key?(:deployments) && 
-                (filter.has_key?(:tasks) || filter.has_key?(:ports) || filter.has_key?(:types))) || 
-                !pattern.empty?)
+            if !options.has_key? :no_tasks
                 reg = filter.has_key?(:tasks) ? filter[:tasks] : pattern
-                tasks = Rock::Inspect::find_tasks(/#{reg}/, filter)
+                reg = /./ unless reg
+                result += Rock::Inspect::find_tasks(/#{reg}/, filter)
             end
 
             #search for deployments
-            if(filter.has_key?(:deployments) ||
-               filter.has_key?(:ports)  ||
-               filter.has_key?(:tasks)  ||
-               filter.has_key?(:types)  ||
-                !pattern.empty?)
+            if !options.has_key? :no_deployments
                 reg = filter.has_key?(:deployments) ? filter[:deployments] : pattern
                 reg = /./ unless reg
-                deployments = Rock::Inspect::find_deployments(/#{reg}/,filter)
+                result += Rock::Inspect::find_deployments(/#{reg}/,filter)
             end
 
             #search for widgets
-            if((!filter.has_key?(:deployments) && !filter.has_key?(:tasks) &&
-                !filter.has_key?(:ports) && !filter.has_key?(:plugins)) ||
-                !pattern.empty?)
+            if !options.has_key? :no_widgets
                 reg = filter.has_key?(:widgets) ? filter[:widgets] : pattern
-                widgets = Rock::Inspect::find_widgets(/#{reg}/, filter)
+                reg = /./ unless reg
+                result += Rock::Inspect::find_widgets(/#{reg}/, filter)
             end
 
-            result =  deployments + tasks + ports + types + widgets
+            #search for plugins
+            if !options.has_key? :no_plugins
+                reg = filter.has_key?(:plugins) ? filter[:plugins] : pattern
+                reg = /./ unless reg
+                result += Rock::Inspect::find_plugins(/#{reg}/, filter)
+            end
+
             result.uniq.sort_by{|t|t.name}
         end
 
         def self.find_tasks(pattern,filter = Hash.new)
             found = []
-            return found if filter.has_key? :no_tasks
+            filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks])
+            return found if !unkown.empty?
+
             #find all tasks which are matching the pattern
             Orocos.available_task_models.each do |name, project_name|
                 if name =~ pattern || project_name =~ pattern
@@ -124,7 +124,8 @@ module Rock
 
         def self.find_ports(pattern,filter = Hash.new)
             found = []
-            return found if filter.has_key? :no_ports
+            filter,unkown = Kernel::filter_options(filter,[:types,:ports])
+            return found if !unkown.empty?
             #find all tasks which are matching the pattern
             Orocos.available_task_models.each do |name, project_name|
                 if tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
@@ -145,7 +146,8 @@ module Rock
 
         def self.find_types(pattern,filter = Hash.new)
             found = Array.new
-            return found if filter.has_key? :no_types
+            filter,unkown = Kernel::filter_options(filter,[:types])
+            return found if !unkown.empty?
             Orocos.available_projects.each_key do |project_name|
                 seen = Set.new
                 next if !@master_project.has_typekit?(project_name)
@@ -174,7 +176,8 @@ module Rock
 
         def self.find_deployments(pattern,filter=Hash.new)
             found = []
-            return found if filter.has_key? :no_deployments
+            filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deplyoments])
+            return found if !unkown.empty?
             Orocos.available_deployments.each do |name, pkg|
                 project_name = pkg.project_name
                 if name =~ pattern || project_name =~ pattern
@@ -192,13 +195,17 @@ module Rock
             found.sort_by{|t|t.name}
         end
 
-
         def self.find_plugins(pattern,filter = Hash.new)
-
+            found = []
+            filter,unkown = Kernel::filter_options(filter,[:types,:plugins])
+            return found if !unkown.empty?
+            found.sort_by{|t|t.name}
         end
+
         def self.find_widgets(pattern,filter=Hash.new)
             found = []
-            return found if filter.has_key? :no_widgets 
+            filter,unkown = Kernel::filter_options(filter,[:types,:widgets])
+            return found if !unkown.empty?
             widgtes = Vizkit.default_loader.available_widgets
             widgtes.each do |widget|
                 if widget_match?(widget,pattern,filter)
@@ -316,50 +323,8 @@ module Rock
         end
 
         def pretty_print(pp)
-            extension = Vizkit.default_loader.cplusplus_extension_hash[@name]
-            ruby_widget_new = Vizkit.default_loader.ruby_widget_hash[@name]
-            pp.text "=========================================================="
-            pp.breakable
-            pp.text "#{@header} #{@name}"
-            pp.breakable
-            if !ruby_widget_new
-                pp.text "C++ Widget"
-            else
-                pp.text "Ruby Widget"
-            end
-            pp.breakable
-            Vizkit.default_loader.registered_for(@name).each do |val|
-                pp.text "registerd for: #{val}"
-                pp.breakable
-            end
-            pp.text "----------------------------------------------------------"
-            pp.breakable
-
-            if extension 
-                pp.breakable
-                extension.instance_methods.each do |method|
-                    pp.text "added ruby method: #{method.to_s}"
-                    pp.text "(#{extension.instance_method(method).arity} parameter)"
-                    pp.breakable
-                end
-            else
-                if !ruby_widget_new
-                    pp.text "no ruby extension"
-                    pp.breakable
-                else
-                    methods = Qt::Widget.instance_methods
-                    klass = ruby_widget_new.call.class
-                    klass.instance_methods.each do |method|
-                        if !methods.include? method
-                            pp.text "ruby method: #{method.to_s}"
-                            pp.text "(#{klass.instance_method(method).arity} parameter)"
-                            pp.breakable
-                        end
-                    end
-                end
-            end
+            Vizkit.default_loader.pretty_print_widget(pp,@name) 
         end
-
     end
 
     class DeploymentView < GenericView
