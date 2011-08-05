@@ -74,6 +74,10 @@ Examples:
         disable_all unless @search_filter.has_key? :no_widgets
         @search_filter.delete :no_widgets
     end
+    opt.on('--show-plugins','if given, will only display plugins. Can be combined with other show options.') do
+        disable_all unless @search_filter.has_key? :no_plugins
+        @search_filter.delete :no_plugins
+    end
     opt.on('--debug') do
         debug = true
     end
@@ -95,6 +99,8 @@ views = result.map do |item|
         Rock::DeploymentView.new(item) 
     elsif(item.object.is_a?(Qt::Widget))
         Rock::WidgetView.new(item) 
+    elsif(item.object.is_a?(Qt::Object))
+        Rock::PluginView.new(item) 
     elsif(item.object.class.is_a?(Class) && item.object.respond_to?(:<=) && item.object <= Typelib::Type)
         Rock::TypeView.new(item) 
     end

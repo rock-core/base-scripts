@@ -199,6 +199,15 @@ module Rock
             found = []
             filter,unkown = Kernel::filter_options(filter,[:types,:plugins])
             return found if !unkown.empty?
+
+            Vizkit.vizkit3d_widget.plugins.each do |name| 
+                if name =~ pattern
+                    plugin = Vizkit::vizkit3d_widget.createPlugin name
+                    if plugin_match?(plugin,pattern,filter)
+                        found << SearchItem.new(:name => name, :object => plugin)
+                    end
+                end
+            end
             found.sort_by{|t|t.name}
         end
 
@@ -221,6 +230,18 @@ module Rock
             return false if (!(deployment.name =~ pattern))
             return false if (filter.has_key?(:deployments) && !(deployment.name =~ filter[:deployments]))
             return false if (deployment.task_activities.all?{|t| !( task_match?(t.task_model,//,filter))})
+            true
+        end
+
+        def self.plugin_match?(plugin,pattern,filter = Hash.new)
+            return false if (!(plugin.name =~ pattern))
+            if(filter.has_key?(:types))
+                has_type = false
+                plugin.plugins.each_value do |adapter|
+                   has_type = true if adapter.expected_ruby_type.name =~ filter[:types]
+                end
+                return false if !has_type
+            end
             true
         end
 
@@ -319,11 +340,20 @@ module Rock
     class WidgetView < GenericView
         def initialize(search_item)
             super
-            @header = "Widget name: "
         end
 
         def pretty_print(pp)
             Vizkit.default_loader.pretty_print_widget(pp,@name) 
+        end
+    end
+
+    class PluginView < GenericView
+        def initialize(search_item)
+            super
+        end
+
+        def pretty_print(pp)
+            pp @object 
         end
     end
 
@@ -360,9 +390,5 @@ module Rock
             @object = obj
             @header = "Task name: "
         end
-    end
-
-    class PluginView
-
     end
 end
