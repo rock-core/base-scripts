@@ -54,23 +54,23 @@ Examples:
         @search_filter[:widgets] = /#{widget}/
     end
 
-    opt.on('--show_types','if given, will only display types. Can be combined with other show options.') do
+    opt.on('--show-types','if given, will only display types. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_types
         @search_filter.delete :no_types
     end
-    opt.on('--show_ports','if given, will only display ports. Can be combined with other show options.') do
+    opt.on('--show-ports','if given, will only display ports. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_ports
         @search_filter.delete :no_ports
     end
-    opt.on('--show_tasks','if given, will only display tasks. Can be combined with other show options.') do
+    opt.on('--show-tasks','if given, will only display tasks. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_tasks
         @search_filter.delete :no_tasks
     end
-    opt.on('--show_deployments','if given, will only display deployments. Can be combined with other show options.') do
+    opt.on('--show-deployments','if given, will only display deployments. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_deployments
         @search_filter.delete :no_deployments
     end
-    opt.on('--show_widgets','if given, will only display widgtes. Can be combined with other show options.') do
+    opt.on('--show-widgets','if given, will only display widgtes. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_widgets
         @search_filter.delete :no_widgets
     end
