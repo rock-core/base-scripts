@@ -200,11 +200,16 @@ module Rock
             filter,unkown = Kernel::filter_options(filter,[:types,:plugins])
             return found if !unkown.empty?
 
-            Vizkit.vizkit3d_widget.plugins.each do |name| 
-                if name =~ pattern
-                    plugin = Vizkit::vizkit3d_widget.createPlugin name
+            Vizkit.vizkit3d_widget.plugins.each do |libname, plugin_name| 
+                if libname =~ pattern || (plugin_name && plugin_name =~ pattern)
+                    plugin = Vizkit::vizkit3d_widget.createPlugin(libname, plugin_name)
                     if plugin_match?(plugin,pattern,filter)
-                        found << SearchItem.new(:name => name, :object => plugin)
+                        item_name =
+                            if plugin_name then "#{libname}/#{plugin_name}"
+                            else libname
+                            end
+
+                        found << SearchItem.new(:name => item_name, :object => plugin)
                     end
                 end
             end
@@ -234,7 +239,6 @@ module Rock
         end
 
         def self.plugin_match?(plugin,pattern,filter = Hash.new)
-            return false if (!(plugin.name =~ pattern))
             if(filter.has_key?(:types))
                 has_type = false
                 plugin.plugins.each_value do |adapter|
