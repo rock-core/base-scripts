@@ -15,8 +15,15 @@ cd $name
 if test -z "$ROCK_TEMPLATE_PREFIX"; then
     ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock-base/template_
     ROCK_TEMPLATE_SUFFIX=.git
-    wget http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/manifest.xml
+    wget --timeout=5 http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/manifest.xml
 
+    if [ $? != 0 ]; then
+	echo
+	echo "ROCK_TEMPLATE_PREFIX is not set and manifest can currently not be retrieved via gitorious.org"
+	echo "Verify your internet connnection or set ROCK_TEMPLATE_PREFIX to <your-rock-installation>/base/templates/"
+	echo
+	exit 2
+    fi
 
     echo
     echo "Please fill out $name/manifest.xml "
@@ -26,7 +33,16 @@ if test -z "$ROCK_TEMPLATE_PREFIX"; then
     echo
 
 else
-    cp ${ROCK_TEMPLATE_PREFIX}/cmake_lib/manifest.xml .
-    sh ${ROCK_TEMPLATE_PREFIX}/cmake_lib/config_manifest.sh
+    CMAKE_LIB_DIR=`echo "${ROCK_TEMPLATE_PREFIX}/cmake_lib" | sed 's/\/\//\//g'`
+    if ! test -d "$CMAKE_LIB_DIR"; then
+	echo
+	echo "Package base/templates/cmake_lib is required, but could not be found at ${CMAKE_LIB_DIR}."
+	echo "Please make sure you install package base/templates/cmake_lib."
+	echo
+	exit 3
+    fi
+	
+    cp $CMAKE_LIB_DIR/manifest.xml .
+    sh $CMAKE_LIB_DIR/config_manifest.sh
 fi
 
