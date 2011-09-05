@@ -10,6 +10,17 @@ if test -e "$name"; then
     exit 1
 fi
 
+# Test if name is a valid orogen component name
+CMP_NAME_BASE=`echo "$name" | sed 's/.*\/\(.*\)/\1/g'`
+CMP_NAME=`echo "$CMP_NAME_BASE" | grep -e '^[a-z0-9][a-z0-9_]*$'`
+
+if test -z "$CMP_NAME"; then
+    echo 
+    echo "Invalid name ${CMP_NAME_BASE}: The component name must be all lowercase, can contain alphanumeric characters and underscores and start with a letter."
+    echo 
+    exit 1
+fi
+
 orogen create $name
 cd $name
 if test -z "$ROCK_TEMPLATE_PREFIX"; then
