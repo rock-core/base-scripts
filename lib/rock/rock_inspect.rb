@@ -365,6 +365,7 @@ module Rock
         def initialize(search_item)
             super
             @header = "Deployment name: "
+	    @name = @name.gsub(/^\w+::/, '')
         end
     end
 
@@ -372,6 +373,7 @@ module Rock
         def initialize(search_item)
             super
             @header = "Typelib name: "
+	    @name = @name.gsub(/^\w+::/, '')
         end
     end
 
