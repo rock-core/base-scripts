@@ -1,0 +1,41 @@
+#! /usr/bin/env ruby
+
+require 'optparse'
+require File.join('base','immigration')
+
+Converter.logger.level = Logger::INFO
+converter = Orocos::Log::Converter.new
+converter.post_fix = ".new"
+parser = OptionParser.new do |opt|
+    opt.banner = <<-EOT
+
+usage: rock-convert <log file>
+    
+    Updates log files which contain base/types to the current base/types version. 
+    This is needed if the samples shall be replayed to orocos ports.
+    
+
+Examples:
+ rock-convert logfile.0.log 
+    EOT
+
+    opt.on('--help') do
+        puts self
+        exit 0
+    end
+    opt.on('-p', '--postfix POSTFIX', 'Postfix which is added to the input file name to produce the output file name.') do |p|
+        converter.post_fix = p
+    end
+
+    opt.on('--debug') do
+        Converter.logger.level = Logger::DEBUG
+    end
+end
+
+remaining = parser.parse(ARGV)
+if remaining.empty?
+    puts parser
+    exit(1)
+end
+
+converter.convert remaining
