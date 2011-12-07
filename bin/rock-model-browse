@@ -1,3 +1,4 @@
+#! /usr/bin/env ruby
 require 'Qt'
 
 require 'rock/doc'
@@ -9,8 +10,14 @@ Orocos.load
 app = Qt::Application.new(ARGV)
 
 main = Qt::Widget.new
-main_layout = Qt::HBoxLayout.new(main)
+main_layout = Qt::VBoxLayout.new(main)
+menu_layout = Qt::HBoxLayout.new
+reload = Qt::PushButton.new("Reload", main)
+menu_layout.add_widget(reload)
+menu_layout.add_stretch(1)
+
 splitter = Qt::Splitter.new
+main_layout.add_layout(menu_layout)
 main_layout.add_widget(splitter)
 
 view = Qt::ListWidget.new(splitter)
@@ -18,26 +25,47 @@ text = Qt::WebView.new(splitter)
 splitter.add_widget(view)
 splitter.add_widget(text)
 
-view.connect(SIGNAL('itemClicked(QListWidgetItem*)')) do |item|
-    model = Orocos.task_model_from_name(item.text)
-    html =<<-EOF
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-<head>
-    <link rel="stylesheet" href="file://#{File.join(Rock::Doc::HTML.template_path, "style.css")}" type="text/css" />
-</head>
-<body>
-    #{Rock::Doc::HTML.render_object(model, 'orogen_task_fragment.page')}
-</body>
-    EOF
-    text.setHtml(html)
+def populate(list)
+    if current = list.current_item
+        current = current.text
+    end
+    list.clear
+    Orocos.available_task_models.keys.sort.each do |name|
+        list.add_item(name)
+    end
+    if current
+        matches = list.find_items(current, Qt::MatchExactly)
+        if !matches.empty?
+            list.current_item = matches.first
+        end
+    elsif list.count > 0
+        list.current_item = list.item(0)
+    end
 end
 
-Orocos.available_task_models.keys.sort.each do |name|
-    view.add_item(name)
-
+reload.connect(SIGNAL('clicked()')) do
+    Orocos.load
+    populate(view)
 end
 
+view.connect(SIGNAL('currentItemChanged(QListWidgetItem*,QListWidgetItem*)')) do |item, _|
+    if item
+        model = Orocos.task_model_from_name(item.text)
+        html =<<-EOF
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+    <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+    <head>
+        <link rel="stylesheet" href="file://#{File.join(Rock::Doc::HTML.template_path, "style.css")}" type="text/css" />
+    </head>
+    <body>
+        #{Rock::Doc::HTML.render_object(model, 'orogen_task_fragment.page')}
+    </body>
+        EOF
+        text.setHtml(html)
+    end
+end
+
+populate(view)
 main.show
 
 app.exec
