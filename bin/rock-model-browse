@@ -20,26 +20,66 @@ splitter = Qt::Splitter.new
 main_layout.add_layout(menu_layout)
 main_layout.add_widget(splitter)
 
-view = Qt::ListWidget.new(splitter)
+class ModelListWidget < Qt::TreeWidget
+    attr_reader :root_types
+    attr_reader :root_tasks
+
+    def initialize(parent = nil)
+        super
+
+        @root_types = Qt::TreeWidgetItem.new(self)
+        root_types.set_text(0, "oroGen Types")
+        @root_tasks = Qt::TreeWidgetItem.new(self)
+        root_tasks.set_text(0, "oroGen Tasks")
+        set_header_label("")
+    end
+
+    def clear
+        @root_types.take_children
+        @root_tasks.take_children
+    end
+end
+
+view = ModelListWidget.new(splitter)
 text = Qt::WebView.new(splitter)
 splitter.add_widget(view)
 splitter.add_widget(text)
 
 def populate(list)
     if current = list.current_item
-        current = current.text
+        current_type = current.data(0, Qt::UserRole)
+        if current_type.null?
+            current = nil
+        else
+            current_type = current_type.to_int
+            current = current.text(0)
+        end
     end
     list.clear
+    
+    Orocos.available_types.keys.sort.each do |name|
+        item = Qt::TreeWidgetItem.new(list.root_types)
+        item.set_text(0, name)
+        item.set_data(0, Qt::UserRole, Qt::Variant.new(1))
+    end
+
     Orocos.available_task_models.keys.sort.each do |name|
-        list.add_item(name)
+        item = Qt::TreeWidgetItem.new(list.root_tasks)
+        item.set_text(0, name)
+        item.set_data(0, Qt::UserRole, Qt::Variant.new(2))
     end
     if current
-        matches = list.find_items(current, Qt::MatchExactly)
+        root =
+            if current_type == 1
+                list.root_types
+            elsif current_type == 2
+                list.root_tasks
+            end
+
+        matches = list.findItems(current, Qt::MatchExactly, 0)
         if !matches.empty?
             list.current_item = matches.first
         end
-    elsif list.count > 0
-        list.current_item = list.item(0)
     end
 end
 
@@ -48,20 +88,24 @@ reload.connect(SIGNAL('clicked()')) do
     populate(view)
 end
 
-view.connect(SIGNAL('currentItemChanged(QListWidgetItem*,QListWidgetItem*)')) do |item, _|
+view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
     if item
-        model = Orocos.task_model_from_name(item.text)
-        html =<<-EOF
-    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-    <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-    <head>
-        <link rel="stylesheet" href="file://#{File.join(Rock::Doc::HTML.template_path, "style.css")}" type="text/css" />
-    </head>
-    <body>
-        #{Rock::Doc::HTML.render_object(model, 'orogen_task_fragment.page')}
-    </body>
-        EOF
-        text.setHtml(html)
+        role = item.data(0, Qt::UserRole)
+        role = if !role.null?
+                   role.to_int
+               end
+        name = item.text(0)
+
+        if role == 1
+            Orocos.load_typekit_for(name, false)
+            fragment = Rock::Doc::HTML.render_object(Orocos.registry.get(name), 'type_fragment.page')
+        elsif role == 2
+            model = Orocos.task_model_from_name(name)
+            fragment = Rock::Doc::HTML.render_object(model, 'orogen_task_fragment.page')
+        end
+        if fragment
+            text.html = Rock::Doc::HTML.render_page(fragment)
+        end
     end
 end
 
