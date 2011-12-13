@@ -81,6 +81,10 @@ Examples:
     opt.on('--debug') do
         debug = true
     end
+    opt.on('--help') do
+        puts parser
+        exit(0)
+    end
 end
 
 remaining = parser.parse(ARGV)
