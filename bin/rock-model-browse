@@ -24,9 +24,12 @@ class ModelListWidget < Qt::TreeWidget
     attr_reader :root_types
     attr_reader :root_tasks
 
+    attr_reader :dummy_models
+
     def initialize(parent = nil)
         super
 
+        @dummy_models = Array.new
         @root_types = Qt::TreeWidgetItem.new(self)
         root_types.set_text(0, "oroGen Types")
         @root_tasks = Qt::TreeWidgetItem.new(self)
@@ -38,6 +41,52 @@ class ModelListWidget < Qt::TreeWidget
         @root_types.take_children
         @root_tasks.take_children
     end
+
+    def reload
+        Orocos.load
+        dummy_models.each do |file_or_dir|
+            Orocos.load_dummy_models(file_or_dir)
+        end
+        populate
+    end
+
+    def populate
+        if current = current_item
+            current_type = current.data(0, Qt::UserRole)
+            if current_type.null?
+                current = nil
+            else
+                current_type = current_type.to_int
+                current = current.text(0)
+            end
+        end
+        clear
+        
+        Orocos.available_types.keys.sort.each do |name|
+            item = Qt::TreeWidgetItem.new(root_types)
+            item.set_text(0, name)
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(1))
+        end
+
+        Orocos.available_task_models.keys.sort.each do |name|
+            item = Qt::TreeWidgetItem.new(root_tasks)
+            item.set_text(0, name)
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(2))
+        end
+        if current
+            root =
+                if current_type == 1
+                    root_types
+                elsif current_type == 2
+                    root_tasks
+                end
+
+            matches = findItems(current, Qt::MatchExactly, 0)
+            if !matches.empty?
+                current_item = matches.first
+            end
+        end
+    end
 end
 
 view = ModelListWidget.new(splitter)
@@ -45,47 +94,8 @@ text = Qt::WebView.new(splitter)
 splitter.add_widget(view)
 splitter.add_widget(text)
 
-def populate(list)
-    if current = list.current_item
-        current_type = current.data(0, Qt::UserRole)
-        if current_type.null?
-            current = nil
-        else
-            current_type = current_type.to_int
-            current = current.text(0)
-        end
-    end
-    list.clear
-    
-    Orocos.available_types.keys.sort.each do |name|
-        item = Qt::TreeWidgetItem.new(list.root_types)
-        item.set_text(0, name)
-        item.set_data(0, Qt::UserRole, Qt::Variant.new(1))
-    end
-
-    Orocos.available_task_models.keys.sort.each do |name|
-        item = Qt::TreeWidgetItem.new(list.root_tasks)
-        item.set_text(0, name)
-        item.set_data(0, Qt::UserRole, Qt::Variant.new(2))
-    end
-    if current
-        root =
-            if current_type == 1
-                list.root_types
-            elsif current_type == 2
-                list.root_tasks
-            end
-
-        matches = list.findItems(current, Qt::MatchExactly, 0)
-        if !matches.empty?
-            list.current_item = matches.first
-        end
-    end
-end
-
 reload.connect(SIGNAL('clicked()')) do
-    Orocos.load
-    populate(view)
+    view.reload
 end
 
 view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
@@ -109,7 +119,11 @@ view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
     end
 end
 
-populate(view)
+bundle_path = File.join("models", "orogen")
+if File.directory?(bundle_path)
+    view.dummy_models << bundle_path
+end
+view.reload
 main.show
 
 app.exec
