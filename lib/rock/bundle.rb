@@ -4,12 +4,38 @@ require 'utilrb/logger'
 require 'pathname'
 
 module Rock
+    # Bundle support
+    #
+    # In Rock, bundles are the packages in which system-related scripting,
+    # modelling and tools are included. They are meant to "bind together" the
+    # different components, packages and tool configuration from rock.
+    #
+    # In practice, the bundle implementation is a thin wrapper on top of the
+    # rest of the rock 
+    #
+    # Bundle-aware scripts should simply use Bundle.initialize / Bundle.load
+    # instead of Orocos.initialize / Orocos.load. This is in principle enough to
+    # get bundle integration. All the rock-* tools on which bundle integration
+    # makes sense should do that already.
     module Bundles
         extend Logger.Root("Bundles", Logger::INFO)
 
+        # Representation of a bundle we found
+        #
+        # The bundle's configuration parameters are stored under the 'bundle'
+        # key in either config/app.yml or config/bundle.yml
+        #
+        # config/app.yml or config/bundle.yml are used to recognize bundles from
+        # normal directories. See Bundles.is_bundle_path?.
         class Bundle
+            # The bundle name
             attr_reader :name
+            # The full path to the bundle
             attr_reader :path
+            # The bundle's configuration hash. It gets loaded ony if
+            # #load_config is called.
+            #
+            # Configuration in bundles
             attr_reader :config
 
             def initialize(path)
@@ -17,6 +43,8 @@ module Rock
                 @path = path
             end
 
+            # Loads the configuration file, or return an already loaded
+            # configuration
             def load_config
                 if @config
                     return config
@@ -33,6 +61,7 @@ module Rock
                 config
             end
 
+            # Enumerate the names of the bundles on which this bundle depends
             def each_dependency(&block)
                 load_config['dependencies'].each(&block)
             end
@@ -60,6 +89,18 @@ module Rock
 
         # Enumerates the path to every registered bundle, starting with the
         # one that has the highest priority
+        #
+        # A directory is considered to be a bundle if it has a config/app.yml or
+        # config/bundle.yml file (even an empty one)
+        #
+        # The bundles are enumerated following the ROCK_BUNDLE_PATH environment
+        # variable:
+        #
+        # * if a directory in ROCK_BUNDLE_PATH is pointing to a bundle, it gets
+        #   added
+        # * if a directory in ROCK_BUNDLE_PATH is a directory that contains
+        #   bundles, all the included bundles are added in an unspecified order
+        #
         def self.each_bundle
             if !block_given?
                 return enum_for(:each_bundle)
@@ -86,7 +127,12 @@ module Rock
             end
         end
 
+        # Exception raised when it is expected that a bundle is present, but
+        # none was found.
         class NoBundle < RuntimeError; end
+
+        # Exception raised when the bundle support looks for a particular bundle
+        # but cound not find it, such as during dependency resolution
         class BundleNotFound < RuntimeError
             # The name of the bundle that was being looked for
             attr_reader :name
@@ -96,6 +142,16 @@ module Rock
             end
         end
 
+        # Returns the Bundle object that represents the current bundle (i.e. the
+        # bundle in which we shoul be working).
+        #
+        # The current bundle can be defined, in order of priority, by:
+        #
+        # * the ROCK_BUNDLE environment variable, which should hold the name of
+        #   the currently selected bundle
+        # * the current directory
+        # * if there is only one bundle found on this system, this bundle is
+        #   returned
         def self.current_bundle
             all_bundles = each_bundle.to_a
             if bundle_name = ENV['ROCK_BUNDLE']
@@ -113,6 +169,8 @@ module Rock
             end
         end
 
+        # Returns an array containing both +root_bundle+ and its dependencies
+        # (recursively). The array is returned in order of priority.
         def self.discover_dependencies(root_bundle)
             all_bundles = self.each_bundle.to_a
 
@@ -183,9 +241,6 @@ module Rock
         end
         def self.find_files_in_dirs(*args)
             Roby.app.find_files_in_dirs(*args)
-        end
-
-        def self.run(*spec)
         end
     end
 end
