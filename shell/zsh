@@ -13,6 +13,10 @@ function rock-bundle-sel() {
     if test "x$?" != "x0"; then
         echo "cannot find bundle $name, run bundle-info to get the list of available bundles"
         return 1
+    elif test -z "$name" || test -d "$name"; then
+        export ROCK_BUNDLE=$bundle_path
+        rock-bundle-info
+        return 0
     else
         export ROCK_BUNDLE=$name
         rock-bundle-info

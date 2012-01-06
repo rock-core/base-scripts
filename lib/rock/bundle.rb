@@ -77,8 +77,15 @@ module Rock
         #
         # Returns nil if we are outside any bundle
         def self.find_bundle_from_current_dir
+            find_bundle_from_dir(Dir.pwd)
+        end
+
+        # Find the bundle that contains the provided directory
+        #
+        # Returns nil if there is none
+        def self.find_bundle_from_dir(dir)
             # Look for a bundle in the parents of Dir.pwd
-            curdir = Pathname.new(Dir.pwd)
+            curdir = Pathname.new(dir)
             while !curdir.root? && !is_bundle_path?(curdir.to_s)
                 curdir = curdir.parent
             end
@@ -111,6 +118,11 @@ module Rock
                 if from_pwd = find_bundle_from_current_dir
                     paths << from_pwd.path
                 end
+            end
+
+            current_bundle = ENV['ROCK_BUNDLE']
+            if File.directory?(current_bundle)
+                yield(Bundle.new(current_bundle))
             end
 
             paths.each do |path|
@@ -155,7 +167,7 @@ module Rock
         def self.current_bundle
             all_bundles = each_bundle.to_a
             if bundle_name = ENV['ROCK_BUNDLE']
-                if bdl = all_bundles.find { |bdl| bdl.name == bundle_name }
+                if bdl = all_bundles.find { |bdl| bdl.name == bundle_name || bdl.path == bundle_name }
                     return bdl
                 else
                     raise ArgumentError, "cannot find currently selected bundle #{bundle_name} (available bundles are: #{all_bundles.map(&:name).sort.join(", ")})"
@@ -221,6 +233,27 @@ module Rock
                 $LOAD_PATH.unshift(current_bundle.path) unless $LOAD_PATH.include?(current_bundle.path)
             end
             Bundles.info "  selected bundles: #{selected_bundles.map(&:name).join(", ")}"
+
+            # Check if the current directory is in a bundle, and if it is the
+            # case if that bundle is part of the selection. Otherwise, issue a
+            # warning
+            if current_dir = find_bundle_from_current_dir
+                if !selected_bundles.any? { |b| b.path == current_dir.path }
+                    sel = each_bundle.find { |b| b.path == current_dir.path }
+
+                    Bundles.warn ""
+                    Bundles.warn "The bundle that contains the current directory,"
+                    Bundles.warn "  #{current_dir.name} (#{current_dir.path})"
+                    Bundles.warn "is not currently selected"
+                    Bundles.warn ""
+                    if sel
+                        Bundles.warn "Did you mean to do bundles-sel #{sel.name} ?"
+                    else
+                        Bundles.warn "Did you mean to do bundles-sel #{current_dir.path} ?"
+                    end
+                end
+            end
+
 
             Roby.app.app_dir = current_bundle.path
             Roby.app.search_path = selected_bundles.map(&:path)

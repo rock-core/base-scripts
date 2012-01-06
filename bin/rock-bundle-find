@@ -1,7 +1,20 @@
 #! /usr/bin/env ruby
 require 'rock/bundle'
 
-name = ARGV.first
+name = ARGV.first || '.'
+
+full_path = File.expand_path(name)
+if File.directory?(full_path)
+    if bdl = Bundles.find_bundle_from_dir(full_path)
+        if registered = Bundles.each_bundle.find { |b| b.path == full_path }
+            puts registered.name
+        else
+            puts bdl.path
+        end
+        exit 0
+    end
+end
+
 Bundles.each_bundle do |bdl|
     if bdl.name == name
         puts bdl.path
