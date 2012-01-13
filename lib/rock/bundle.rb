@@ -264,6 +264,10 @@ module Rock
             Orocos.load
         end
 
+        def self.run(*args, &block)
+            Orocos.run(*args, &block)
+        end
+
         # Initializes the bundle support, and initializes the orocos layer
         def self.initialize
             self.load
