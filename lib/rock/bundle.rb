@@ -121,8 +121,11 @@ module Rock
             end
 
             current_bundle = ENV['ROCK_BUNDLE']
-            if File.directory?(current_bundle)
-                yield(Bundle.new(current_bundle))
+            if current_bundle && current_bundle.empty?
+                current_bundle = nil
+            end
+            if current_bundle && File.directory?(current_bundle)
+                yield(Bundle.new(File.expand_path(current_bundle)))
             end
 
             paths.each do |path|
@@ -167,7 +170,8 @@ module Rock
         def self.current_bundle
             all_bundles = each_bundle.to_a
             if bundle_name = ENV['ROCK_BUNDLE']
-                if bdl = all_bundles.find { |bdl| bdl.name == bundle_name || bdl.path == bundle_name }
+                bundle_path = File.expand_path(bundle_name)
+                if bdl = all_bundles.find { |bdl| bdl.name == bundle_name || bdl.path == bundle_path }
                     return bdl
                 else
                     raise ArgumentError, "cannot find currently selected bundle #{bundle_name} (available bundles are: #{all_bundles.map(&:name).sort.join(", ")})"
