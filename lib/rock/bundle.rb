@@ -226,9 +226,9 @@ module Rock
                 Bundles.info "    #{b.name} (#{b.path})"
             end
             if current_bundle
-                Bundles.info "  current_bundle: #{current_bundle.name} in #{current_bundle.path}"
+                Bundles.info "  selected bundle: #{current_bundle.name} in #{current_bundle.path}"
             else
-                Bundles.info "  no bundle registered"
+                Bundles.info "  no bundle currently selected"
                 return
             end
 
@@ -236,7 +236,7 @@ module Rock
             selected_bundles.each do |b|
                 $LOAD_PATH.unshift(current_bundle.path) unless $LOAD_PATH.include?(current_bundle.path)
             end
-            Bundles.info "  selected bundles: #{selected_bundles.map(&:name).join(", ")}"
+            Bundles.info "  active bundles: #{selected_bundles.map(&:name).join(", ")}"
 
             # Check if the current directory is in a bundle, and if it is the
             # case if that bundle is part of the selection. Otherwise, issue a
@@ -248,7 +248,7 @@ module Rock
                     Bundles.warn ""
                     Bundles.warn "The bundle that contains the current directory,"
                     Bundles.warn "  #{current_dir.name} (#{current_dir.path})"
-                    Bundles.warn "is not currently selected"
+                    Bundles.warn "is not currently active"
                     Bundles.warn ""
                     if sel
                         Bundles.warn "Did you mean to do bundles-sel #{sel.name} ?"
