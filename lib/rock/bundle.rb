@@ -124,7 +124,7 @@ module Rock
             if current_bundle && current_bundle.empty?
                 current_bundle = nil
             end
-            if current_bundle && File.directory?(current_bundle)
+            if current_bundle && Bundles.is_bundle_path?(current_bundle)
                 yield(Bundle.new(File.expand_path(current_bundle)))
             end
 
