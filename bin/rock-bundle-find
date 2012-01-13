@@ -1,7 +1,14 @@
 #! /usr/bin/env ruby
 require 'rock/bundle'
+require 'optparse'
 
-name = ARGV.first || '.'
+quiet = false
+parser = OptionParser.new do |opt|
+    opt.on('--quiet') do
+        quiet = true
+    end
+end
+name = parser.parse(ARGV).first || '.'
 
 full_path = File.expand_path(name)
 if File.directory?(full_path)
@@ -17,10 +24,14 @@ end
 
 Bundles.each_bundle do |bdl|
     if bdl.name == name
-        puts bdl.path
+        if !quiet
+            puts bdl.path
+        end
         exit 0
     end
 end
-puts "cannot find required bundle"
+if !quiet
+    STDERR.puts "cannot find required bundle"
+end
 exit 1
 
