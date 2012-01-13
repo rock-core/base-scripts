@@ -1,0 +1,30 @@
+#! /bin/sh
+
+set -e
+
+path=$1
+if test -z "$path"; then
+    echo "usage: rock-create-bundle dirname"
+    exit 1
+fi
+if test -e "$path"; then
+    echo "$path already exists"
+    exit 1
+fi
+
+base_dir=`dirname $path`
+if test -n "$base_dir"; then
+    mkdir -p $base_dir
+    name=`basename $path`
+else
+    name=$path
+fi
+
+if test -z "$ROCK_TEMPLATE_PREFIX"; then
+    ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock-base/template_
+    ROCK_TEMPLATE_SUFFIX=.git
+fi
+git clone ${ROCK_TEMPLATE_PREFIX}bundle${ROCK_TEMPLATE_SUFFIX} $path
+cd $path
+./config.sh $name
+
