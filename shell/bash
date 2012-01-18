@@ -33,8 +33,12 @@ function rock-bundle-default() {
         return 0
     fi
 }
+function rock-bundle-unsel() {
+    unset ROCK_BUNDLE
+}
 
 alias bundle-sel=rock-bundle-sel
+alias bundle-unsel=rock-bundle-unsel
 alias bundle-default=rock-bundle-default
 alias bundle-find=rock-bundle-find
 alias bundle-info=rock-bundle-info
