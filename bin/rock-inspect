@@ -94,6 +94,8 @@ if remaining.empty? && @search_filter.empty?
 end
 
 result = Rock::Inspect.find(remaining,@search_filter)
+remaining = remaining.join("|")
+result = Rock::Inspect.find(remaining, @search_filter)
 views = result.map do |item|
     if(item.object.is_a?(Orocos::Spec::TaskContext))
         Rock::TaskView.new(item)
