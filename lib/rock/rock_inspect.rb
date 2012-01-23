@@ -1,5 +1,5 @@
-require 'vizkit'
-require'orocos'
+require 'utilrb/module/attr_predicate'
+require 'orocos'
 
 module Rock
     class SearchItem
@@ -33,10 +33,11 @@ module Rock
     class Inspect
         class << self
             attr_accessor :debug
+            attr_predicate :has_vizkit?, true
         end
 
-        Inspect::debug = false
-        Orocos.load
+        Inspect.debug = false
+        Inspect.has_vizkit = true
         @master_project = Orocos::Generation::Project.new
 
         def self.load_orogen_project(master_project, name, debug)
@@ -57,48 +58,47 @@ module Rock
 
             #search for types
             #we are not searching for types all the time 
-            if !options.has_key? :no_types
+            if !options[:no_types]
                 reg = filter.has_key?(:types) ? filter[:types] : pattern
                 reg = /./ unless reg
                 result += Rock::Inspect::find_types(/#{reg}/,filter)
             end
 
             #search for ports
-            if !options.has_key? :no_ports
+            if !options[:no_ports]
                 reg = filter.has_key?(:ports) ? filter[:ports] : pattern
                 reg = /./ unless reg
                 result += Rock::Inspect::find_ports(/#{reg}/,filter)
             end
 
             #search for tasks
-            if !options.has_key? :no_tasks
-                reg = filter.has_key?(:tasks) ? filter[:tasks] : pattern
-                reg = /./ unless reg
+            if !options[:no_tasks]
+                reg = (filter[:tasks] || pattern || /./)
                 result += Rock::Inspect::find_tasks(/#{reg}/, filter)
             end
 
             #search for deployments
-            if !options.has_key? :no_deployments
+            if !options[:no_deployments]
                 reg = filter.has_key?(:deployments) ? filter[:deployments] : pattern
                 reg = /./ unless reg
                 result += Rock::Inspect::find_deployments(/#{reg}/,filter)
             end
 
             #search for widgets
-            if !options.has_key? :no_widgets
+            if !options[:no_widgets]
                 reg = filter.has_key?(:widgets) ? filter[:widgets] : pattern
                 reg = /./ unless reg
                 result += Rock::Inspect::find_widgets(/#{reg}/, filter)
             end
 
             #search for plugins
-            if !options.has_key? :no_plugins
+            if !options[:no_plugins]
                 reg = filter.has_key?(:plugins) ? filter[:plugins] : pattern
                 reg = /./ unless reg
                 result += Rock::Inspect::find_plugins(/#{reg}/, filter)
             end
 
-            result.uniq.sort_by{|t|t.name}
+            result.uniq.sort_by(&:name)
         end
 
         def self.find_tasks(pattern,filter = Hash.new)
@@ -398,3 +398,11 @@ module Rock
         end
     end
 end
+
+
+begin
+    require 'vizkit'
+rescue LoadError
+    Rock::Inspect.has_vizkit = false
+end
+
