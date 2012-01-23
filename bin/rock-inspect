@@ -1,7 +1,7 @@
 #! /usr/bin/env ruby
 
 require 'optparse'
-require File.join(File.dirname(__FILE__),'..','lib','rock','rock_inspect.rb')
+require 'rock/rock_inspect'
 
 search_for = []
 @search_filter = Hash.new
