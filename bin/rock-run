@@ -1,0 +1,54 @@
+#! /usr/bin/env ruby
+
+require 'rock/bundle'
+
+Roby::Application.logger.level = Logger::DEBUG
+Rock::Bundles.load
+filename =
+    if File.file?(ARGV.first)
+        ARGV.shift
+    elsif file = Rock::Bundles.find_file('scripts', ARGV.first, :order => :specific_first)
+        ARGV.shift
+        file
+    elsif file = Rock::Bundles.find_file('scripts', "#{ARGV.first}.rb", :order => :specific_first)
+        ARGV.shift
+        file
+    end
+
+if filename
+    if Rock::Bundles.is_ruby_script?(filename)
+        load filename
+        exit
+    else
+        exec(filename, *ARGV)
+    end
+end
+
+require 'orocos'
+require 'orocos/scripts'
+
+Orocos.initialize
+
+parser = OptionParser.new
+Orocos::Scripts.common_optparse_setup(parser)
+model, name = parser.parse(ARGV)
+name  ||= "rock-run#{Process.pid}"
+
+Orocos.run model => name do
+    task = Orocos::TaskContext.get(name)
+    Orocos::Scripts.conf(task)
+
+    if Orocos::Scripts.gui?
+        require 'vizkit'
+        Vizkit.display(task)
+
+        #if task.rtt_state == :PRE_OPERATIONAL
+        #    task.configure
+        #end
+        #task.start
+        Vizkit.exec
+    else
+        STDIN.readline
+    end
+end
+

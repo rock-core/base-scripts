@@ -234,7 +234,7 @@ module Rock
 
             selected_bundles = discover_dependencies(current_bundle)
             selected_bundles.each do |b|
-                $LOAD_PATH.unshift(current_bundle.path) unless $LOAD_PATH.include?(current_bundle.path)
+                $LOAD_PATH.unshift(b.path) unless $LOAD_PATH.include?(b.path)
             end
             Bundles.info "  active bundles: #{selected_bundles.map(&:name).join(", ")}"
 
@@ -274,6 +274,15 @@ module Rock
             Orocos.run(*args, &block)
         end
 
+        def self.is_ruby_script?(file)
+            if file =~ /\.rb$/
+                return true
+            else
+                first_line = File.open(file).each_line.find { true }
+                return first_line =~ /^#!.*ruby/
+            end
+        end
+
         # Initializes the bundle support, and initializes the orocos layer
         def self.initialize
             self.load
@@ -282,6 +291,9 @@ module Rock
 
         def self.find_dirs(*args)
             Roby.app.find_dirs(*args)
+        end
+        def self.find_file(*args)
+            Roby.app.find_file(*args)
         end
         def self.find_files(*args)
             Roby.app.find_files(*args)
