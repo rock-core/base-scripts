@@ -211,7 +211,6 @@ module Rock
 
         # Initializes the bundle support, and load all the available orocos info
         def self.load(required = false)
-            Bundles.info "initializing bundle support"
             current_bundle =
                 begin
                     self.current_bundle
@@ -221,14 +220,8 @@ module Rock
                     end
                 end
 
-            Bundles.info "  available bundles:"
-            each_bundle do |b|
-                Bundles.info "    #{b.name} (#{b.path})"
-            end
-            if current_bundle
-                Bundles.info "  selected bundle: #{current_bundle.name} in #{current_bundle.path}"
-            else
-                Bundles.info "  no bundle currently selected"
+            if !current_bundle
+                Bundles.info "No bundle currently selected"
                 return
             end
 
@@ -236,7 +229,7 @@ module Rock
             selected_bundles.each do |b|
                 $LOAD_PATH.unshift(b.path) unless $LOAD_PATH.include?(b.path)
             end
-            Bundles.info "  active bundles: #{selected_bundles.map(&:name).join(", ")}"
+            Bundles.info "Active bundles: #{selected_bundles.map(&:name).join(", ")}"
 
             # Check if the current directory is in a bundle, and if it is the
             # case if that bundle is part of the selection. Otherwise, issue a

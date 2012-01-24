@@ -1,5 +1,22 @@
 #! /usr/bin/env ruby
 require 'rock/bundle'
 
-Bundles.logger.level = Logger::DEBUG
 Bundles.load
+
+puts "Available bundles:"
+Bundles.each_bundle do |b|
+    puts "  #{b.name} (#{b.path})"
+end
+
+current_bundle =
+    begin Bundles.current_bundle
+    rescue Bundles::NoBundle
+    end
+
+if current_bundle
+    puts "Selected bundle: #{current_bundle.name} in #{current_bundle.path}"
+else
+    puts "No selected bundle"
+end
+
+
