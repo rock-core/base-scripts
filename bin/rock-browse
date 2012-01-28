@@ -3,10 +3,10 @@ require 'Qt'
 
 require 'rock/doc'
 require 'qtwebkit'
-
+require 'autoproj'
 require 'orocos'
 Orocos.load
-
+Autoproj::CmdLine.initialize_and_load
 app = Qt::Application.new(ARGV)
 
 main = Qt::Widget.new
@@ -21,25 +21,37 @@ main_layout.add_layout(menu_layout)
 main_layout.add_widget(splitter)
 
 class ModelListWidget < Qt::TreeWidget
-    attr_reader :root_types
-    attr_reader :root_tasks
-
+    attr_reader :roots
     attr_reader :dummy_models
+
+    ROLE_OROGEN_TYPE = 0
+    ROLE_OROGEN_TASK = 1
+    ROLE_INSTALLED_PACKAGE = 2
+    ROLE_AVAILABLE_PACKAGE = 3
+    ROLE_END = 4
+
+    ROLE_NAMES = [
+        "oroGen Types",
+        "oroGen Tasks",
+        "Installed Packages",
+        "Available Packages"
+    ]
 
     def initialize(parent = nil)
         super
 
         @dummy_models = Array.new
-        @root_types = Qt::TreeWidgetItem.new(self)
-        root_types.set_text(0, "oroGen Types")
-        @root_tasks = Qt::TreeWidgetItem.new(self)
-        root_tasks.set_text(0, "oroGen Tasks")
+
+        @roots = Array.new
+        ROLE_END.times do |i|
+            roots[i] = Qt::TreeWidgetItem.new(self)
+            roots[i].set_text(0, ROLE_NAMES[i])
+        end
         set_header_label("")
     end
 
     def clear
-        @root_types.take_children
-        @root_tasks.take_children
+        roots.each(&:take_children)
     end
 
     def reload
@@ -63,27 +75,34 @@ class ModelListWidget < Qt::TreeWidget
         clear
         
         Orocos.available_types.keys.sort.each do |name|
-            item = Qt::TreeWidgetItem.new(root_types)
+            item = Qt::TreeWidgetItem.new(roots[ROLE_OROGEN_TYPE])
             item.set_text(0, name)
-            item.set_data(0, Qt::UserRole, Qt::Variant.new(1))
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TYPE))
         end
 
         Orocos.available_task_models.keys.sort.each do |name|
-            item = Qt::TreeWidgetItem.new(root_tasks)
+            item = Qt::TreeWidgetItem.new(roots[ROLE_OROGEN_TASK])
             item.set_text(0, name)
-            item.set_data(0, Qt::UserRole, Qt::Variant.new(2))
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TASK))
         end
-        if current
-            root =
-                if current_type == 1
-                    root_types
-                elsif current_type == 2
-                    root_tasks
-                end
 
+        Autoproj.manifest.packages.values.sort_by(&:name).each do |pkg|
+            role = if File.directory?(pkg.autobuild.srcdir)
+                       ROLE_INSTALLED_PACKAGE
+                   else
+                       ROLE_AVAILABLE_PACKAGE
+                   end
+
+            item = Qt::TreeWidgetItem.new(roots[role])
+            item.set_text(0, pkg.name)
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(role))
+        end
+
+        if current
+            root = roots[current_type]
             matches = findItems(current, Qt::MatchExactly, 0)
             if !matches.empty?
-                current_item = matches.first
+                self.current_item = matches.first
             end
         end
     end
@@ -106,12 +125,15 @@ view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
                end
         name = item.text(0)
 
-        if role == 1
+        if role == ModelListWidget::ROLE_OROGEN_TYPE
             Orocos.load_typekit_for(name, false)
             fragment = Rock::Doc::HTML.render_object(Orocos.registry.get(name), 'type_fragment.page')
-        elsif role == 2
+        elsif role == ModelListWidget::ROLE_OROGEN_TASK
             model = Orocos.task_model_from_name(name)
             fragment = Rock::Doc::HTML.render_object(model, 'orogen_task_fragment.page')
+        elsif role == ModelListWidget::ROLE_INSTALLED_PACKAGE || role == ModelListWidget::ROLE_AVAILABLE_PACKAGE
+            package = Autoproj.manifest.packages[name]
+            fragment = Rock::Doc::HTML.render_object(package, 'autoproj_package_fragment.page')
         end
         if fragment
             text.html = Rock::Doc::HTML.render_page(fragment)

@@ -1,0 +1,48 @@
+<%
+    pkg, pkg_set = object.autobuild, object.package_set
+    vcs_def = Autoproj.manifest.importer_definition_for(pkg.name)
+    set_vcs_def = pkg_set.vcs
+    if pkg.description
+        authors = REXML::XPath.each(pkg.description.xml, "//author").map(&:text).
+            map { |s| Rock::Doc::HTML.obscure_email(s) }.
+            join(", ")
+        license = REXML::XPath.each(pkg.description.xml, "//license").map(&:text).join(", ")
+        urls = REXML::XPath.each(pkg.description.xml, "//url").map(&:to_s).
+            map { |s| "<a href=\"#{s}\">#{s}</a>" }.
+            join(" ")
+    end
+
+    opt_deps = pkg.optional_dependencies.to_set
+    real_deps = pkg.dependencies.find_all { |dep_name| !opt_deps.include?(dep_name) }.
+        sort.map { |name| link_to(Autoproj.manifest.packages[name]) }
+    opt_deps = opt_deps.
+        sort.map { |name| link_to(Autoproj.manifest.packages[name]) }
+    osdeps = pkg.os_packages.sort.
+        map { |name| link_to(OSPackage.new(name)) }
+
+    real_deps, opt_deps, osdeps = [real_deps, opt_deps, osdeps].
+        map do |array|
+            if array.empty? then 'none'
+            else array.join(", ")
+            end
+        end
+%>
+
+<h2>Package Info</h2>
+<ul class="body-header-list">
+    <%= render_item('name', pkg.name) %>
+    <%= render_item('authors', authors || '') %>
+    <%= render_item('license', license || '') %>
+    <%= render_item('URL', urls || '') %>
+    <%= render_item('mandatory dependencies', real_deps) %>
+    <%= render_item('optional dependencies', opt_deps) %>
+    <%= render_item('OS dependencies', osdeps) %>
+
+</ul>
+
+<h2>Import Info</h2>
+<ul class="body-header-list">
+    <% doc = "in autoproj, a package set is used to declare packages so that they can be imported and built. To be able to build a package, one should therefore add the relevant package set to its build configuration by copy/pasting one of the following blocks (either the Rock short definition or the Autoproj definition) into the package_sets section of autoproj/manifest. See also <a href=\"{relocatable: /documentation/tutorials/190_installing_packages.html}\">this tutorial</a>." %>
+    <%= render_item('defined in package set', link_to(pkg_set) + help_tip(doc) + render_object(set_vcs_def)) %>
+    <%= render_item('import info', render_object(vcs_def)) %>
+</ul>

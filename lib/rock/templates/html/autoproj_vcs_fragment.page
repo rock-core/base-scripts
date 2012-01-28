@@ -1,0 +1,32 @@
+<%
+if vcs.kind_of?(Hash)
+    options = vcs.dup
+    type = options.delete('type')
+    url  = options.delete('url')
+else 
+    options = vcs.options
+    type = vcs.type
+    url = vcs.url
+end
+
+value = []
+if type
+    value << ['type', type]
+end
+if url
+    value << ['url', url]
+end
+value = value.concat(options.to_a.sort_by { |k, _| k.to_s })
+value = value.map do |key, value|
+    if value.respond_to?(:to_str) && File.file?(value) && value =~ /^\//
+        value = Pathname.new(value).relative_path_from(Pathname.new(Autoproj.root_dir))
+    elsif value =~ /git:\/\/(.*)\.git/
+        value = "<a href=\"http://#{$1}\">#{value}</a>"
+    end
+    "#{key}: #{value}"
+end
+%>
+
+<pre class="vcs">
+  - <%= value.join("\n    ") %>
+</pre>

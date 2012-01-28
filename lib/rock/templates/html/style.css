@@ -9,3 +9,42 @@ body {margin: 0px auto; padding: 5px; background: url(img/background_body_grey.g
 .body-header-list li table td {margin: 0px; padding: 0px 7px 0px 7px; border: none; text-align: left;}
 .body-header-list li table th {margin: 0px; padding: 0px; border: none; empty-cells: show; text-align: left; 	}
 
+pre {
+padding:5px;
+background:#e4e4ff;
+color:#222;
+border:2px solid #ddd;
+margin-top: .2em;
+margin-bottom: .2em;
+margin-left: 0em;
+margin-right: 0em;
+font-family: monospace;
+font-size: 80%;
+}
+
+pre.vcs {
+    line-height: 1.2em;
+}
+div.vcs_info {
+    margin-left: 2em;
+}
+div.vcs span.toggle {
+    font-size: 70%;
+    margin-left: .5em;
+    font-weight: bold;
+    font-style: italic;
+}
+span.vcs_override {
+    font-size: 90%;
+    font-weight: bold;
+    line-height: 1em;
+}
+table.short_doc {
+    margin-top: .2em;
+    background-color: rgb(238,237,249);
+    width: 100%;
+}
+table.short_doc td.short_doc {
+    font-style: italic;
+}
+

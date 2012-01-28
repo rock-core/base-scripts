@@ -9,6 +9,27 @@ module Rock
             end
             @templates = Hash.new
 
+            def self.obscure_email(email)
+                return nil if email.nil? #Don't bother if the parameter is nil.
+                lower = ('a'..'z').to_a
+                upper = ('A'..'Z').to_a
+                email.split('').map { |char|
+                    output = lower.index(char) + 97 if lower.include?(char)
+                    output = upper.index(char) + 65 if upper.include?(char)
+                    output ? "&##{output};" : (char == '@' ? '&#0064;' : char)
+                }.join
+            end
+
+            @help_id = 0
+            def self.allocate_help_id
+                @help_id += 1
+            end
+
+            def self.help_tip(doc)
+                id = allocate_help_id
+                "<span class=\"help_trigger\" id=\"#{id}\"><img src=\"{relocatable: /img/help.png}\" /></span><div class=\"help\" id=\"help_#{id}\">#{doc}</div>"
+            end
+
             def self.load_template(full_path)
                 if template = @templates[full_path]
                     return template
@@ -46,6 +67,8 @@ module Rock
 
             def self.rendering_context_for(object)
                 case object
+                when Autoproj::VCSDefinition
+                    VCSRenderingContext.new(object)
                 when Orocos::Spec::TaskContext
                     TaskRenderingContext.new(object)
                 when Class
@@ -61,14 +84,27 @@ module Rock
 
             def self.render_object(object, *template_path)
                 context = rendering_context_for(object)
+                if template_path.empty?
+                    template_path = context.default_template
+                    if !template_path || template_path.empty?
+                        raise ArgumentError, "no default fragment defined for #{object}, of class #{object.class}"
+                    end
+                end
+
                 context.render(*template_path)
             end
 
+            OSPackage = Struct.new :name
+
             # Base class for rendering contexts
             class RenderingContext
+                attr_reader :object
+                attr_reader :default_template
+
                 # Mapped object
-                def initialize(object)
+                def initialize(object, *default_template)
                     @object = object
+                    @default_template = default_template
                 end
 
                 # No links by default
@@ -78,6 +114,10 @@ module Rock
                     else arg.to_s
                     end
                 end
+
+                # No help tips by default, it relies on having specialized
+                # mechanisms too much
+                def help_tip(text); "" end
 
                 # Create an item for the rendering in tables
                 def render_item(name, value = nil)
@@ -92,10 +132,17 @@ module Rock
                     template_path += [binding]
                     HTML.render_template(*template_path)
                 end
+
+                def render_object(object, *template_path)
+                    HTML.render_object(object, *template_path)
+                end
             end
 
             class TaskRenderingContext < RenderingContext
                 def task; @object end
+                def initialize(object)
+                    super(object, 'orogen_task_fragment.page')
+                end
             end
 
             class TypeRenderingContext < RenderingContext
@@ -103,6 +150,10 @@ module Rock
 
                 attr_reader :intermediate_type
                 attr_reader :ruby_type
+
+                def initialize(object)
+                    super(object, 'orogen_type_fragment.page')
+                end
 
                 def has_convertions?(type, recursive = true)
                     if type <= Typelib::NumericType
@@ -203,6 +254,33 @@ module Rock
                     end
 
                     super
+                end
+            end
+
+            class VCSRenderingContext < RenderingContext
+                def vcs; object end
+
+                def initialize(object)
+                    super(object, 'autoproj_vcs_fragment.page')
+                end
+
+                def render(*template_path)
+                    if vcs.raw
+                        first = true
+                        raw_info = vcs.raw.map do |pkg_set, vcs_info|
+                            fragment = super
+                            if !first
+                                fragment = "<span class=\"vcs_override\">overriden in #{pkg_set}</span>" + fragment
+                            end
+                            first = false
+                            fragment
+                        end
+                        raw_vcs = "<div class=\"vcs\">Rock short definition<span class=\"toggle\">show/hide</span><div class=\"vcs_info\">#{raw_info.join("\n")}</div></div>"
+                    end
+
+                    vcs_info = self.vcs
+                    raw_vcs +
+    "<div class=\"vcs\">Autoproj definition<span class=\"toggle\">show/hide</span><div class=\"vcs_info\">#{super}</div></div>"
                 end
             end
         end
