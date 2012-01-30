@@ -1,6 +1,8 @@
 require 'erb'
 module Rock
     module Doc
+        OSPackage = Struct.new :name
+
         module HTML
             TEMPLATE_DIR = File.expand_path(File.join('templates', 'html'), File.dirname(__FILE__))
 
@@ -93,8 +95,6 @@ module Rock
 
                 context.render(*template_path)
             end
-
-            OSPackage = Struct.new :name
 
             # Base class for rendering contexts
             class RenderingContext

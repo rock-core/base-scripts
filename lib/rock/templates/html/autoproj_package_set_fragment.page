@@ -1,0 +1,32 @@
+<% pkg_set = object %>
+
+<h2>Package Info</h2>
+<ul class="body-header-list">
+    <%= render_item('name', pkg_set.name) %>
+
+<% if pkg_set.empty? %>
+    <%= render_item('is_empty') %>
+<% else %>
+    <%= render_item('imported from', render_object(pkg_set.vcs)) %>
+    <%
+    imports = pkg_set.each_imported_set.to_a
+    if !imports.empty?
+        imports.each do |imported_set|
+
+    %>
+    <%= render_item("imports", link_to(imported_set)) %>
+    <%
+        end
+    end
+    set_packages = pkg_set.each_package.sort_by(&:name)
+    set_packages = set_packages.map do |pkg|
+        link_to(pkg)
+    end
+    osdeps = pkg_set.each_osdep.map(&:first).sort.map do |name|
+        link_to(OSPackage.new(name))
+    end
+    %>
+    <%= render_item('packages', set_packages.join(", ")) %>
+    <%= render_item('osdeps', osdeps.join(", ")) %>
+<% end %>
+

@@ -28,13 +28,16 @@ class ModelListWidget < Qt::TreeWidget
     ROLE_OROGEN_TASK = 1
     ROLE_INSTALLED_PACKAGE = 2
     ROLE_AVAILABLE_PACKAGE = 3
-    ROLE_END = 4
+    ROLE_PACKAGE_SET = 4
+    ROLE_OSDEPS = 5
 
     ROLE_NAMES = [
         "oroGen Types",
         "oroGen Tasks",
         "Installed Packages",
-        "Available Packages"
+        "Available Packages",
+        "Package Sets",
+        'OS Packages'
     ]
 
     def initialize(parent = nil)
@@ -43,9 +46,9 @@ class ModelListWidget < Qt::TreeWidget
         @dummy_models = Array.new
 
         @roots = Array.new
-        ROLE_END.times do |i|
+        ROLE_NAMES.each_with_index do |name, i|
             roots[i] = Qt::TreeWidgetItem.new(self)
-            roots[i].set_text(0, ROLE_NAMES[i])
+            roots[i].set_text(0, name)
         end
         set_header_label("")
     end
@@ -98,6 +101,18 @@ class ModelListWidget < Qt::TreeWidget
             item.set_data(0, Qt::UserRole, Qt::Variant.new(role))
         end
 
+        Autoproj.manifest.each_package_set.sort_by(&:name).each do |pkg_set|
+            item = Qt::TreeWidgetItem.new(roots[ROLE_PACKAGE_SET])
+            item.set_text(0, pkg_set.name)
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_PACKAGE_SET))
+        end
+
+        Autoproj.osdeps.all_definitions.keys.sort.each do |osdep_name|
+            item = Qt::TreeWidgetItem.new(roots[ROLE_OSDEPS])
+            item.set_text(0, osdep_name)
+            item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OSDEPS))
+        end
+
         if current
             root = roots[current_type]
             matches = findItems(current, Qt::MatchExactly, 0)
@@ -134,7 +149,14 @@ view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
         elsif role == ModelListWidget::ROLE_INSTALLED_PACKAGE || role == ModelListWidget::ROLE_AVAILABLE_PACKAGE
             package = Autoproj.manifest.packages[name]
             fragment = Rock::Doc::HTML.render_object(package, 'autoproj_package_fragment.page')
+        elsif role == ModelListWidget::ROLE_PACKAGE_SET
+            package = Autoproj.manifest.each_package_set.find { |pkg_set| pkg_set.name == name }
+            fragment = Rock::Doc::HTML.render_object(package, 'autoproj_package_set_fragment.page')
+        elsif role == ModelListWidget::ROLE_OSDEPS
+            osdep = Rock::Doc::OSPackage.new(name)
+            fragment = Rock::Doc::HTML.render_object(osdep, 'autoproj_osdeps_fragment.page')
         end
+
         if fragment
             text.html = Rock::Doc::HTML.render_page(fragment)
         end
