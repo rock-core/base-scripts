@@ -12,15 +12,33 @@
             join(" ")
     end
 
-    opt_deps = pkg.optional_dependencies.to_set
-    real_deps = pkg.dependencies.find_all { |dep_name| !opt_deps.include?(dep_name) }.
-        sort.map { |name| link_to(Autoproj.manifest.packages[name]) }
-    opt_deps = opt_deps.
-        sort.map { |name| link_to(Autoproj.manifest.packages[name]) }
-    osdeps = pkg.os_packages.sort.
-        map { |name| link_to(OSPackage.new(name)) }
+    all_opt_deps = pkg.optional_dependencies.to_set
+    pkg_opt_deps, ospkg_opt_deps, disabled = pkg.partition_optional_dependencies
+    pkg_deps = pkg.dependencies.
+        find_all { |dep_name| !all_opt_deps.include?(dep_name) }.
+        sort.map do |name|
+            if !(package = Autoproj.manifest.package(name))
+                raise ArgumentError, "cannot find definition for package #{name}"
+            end
+            link_to(package)
+        end
+    ospkg_deps = pkg.os_packages.
+        find_all { |dep_name| !all_opt_deps.include?(dep_name) }.
+        sort.map { |name| link_to(OSPackage.new(name)) }
 
-    real_deps, opt_deps, osdeps = [real_deps, opt_deps, osdeps].
+    pkg_opt_deps = pkg_opt_deps.
+        sort.map do |name|
+            if !(package = Autoproj.manifest.package(name))
+                raise ArgumentError, "cannot find definition for package #{name}"
+            end
+            link_to(package)
+        end
+    ospkg_opt_deps = ospkg_opt_deps.
+        sort.map do |name|
+            link_to(OSPackage.new(name))
+        end
+
+    pkg_deps, ospkg_deps, pkg_opt_deps, ospkg_opt_deps = [pkg_deps, ospkg_deps, pkg_opt_deps, ospkg_opt_deps].
         map do |array|
             if array.empty? then 'none'
             else array.join(", ")
@@ -34,9 +52,10 @@
     <%= render_item('authors', authors || '') %>
     <%= render_item('license', license || '') %>
     <%= render_item('URL', urls || '') %>
-    <%= render_item('mandatory dependencies', real_deps) %>
-    <%= render_item('optional dependencies', opt_deps) %>
-    <%= render_item('OS dependencies', osdeps) %>
+    <%= render_item('mandatory dependencies', pkg_deps) %>
+    <%= render_item('optional dependencies', pkg_opt_deps) %>
+    <%= render_item('mandatory OS dependencies', ospkg_deps) %>
+    <%= render_item('optional OS dependencies', ospkg_opt_deps) %>
 
 </ul>
 

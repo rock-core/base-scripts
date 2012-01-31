@@ -20,7 +20,7 @@
     end
     set_packages = pkg_set.each_package.sort_by(&:name)
     set_packages = set_packages.map do |pkg|
-        link_to(pkg)
+        link_to(Autoproj.manifest.package(pkg.name))
     end
     osdeps = pkg_set.each_osdep.map(&:first).sort.map do |name|
         link_to(OSPackage.new(name))
@@ -29,4 +29,5 @@
     <%= render_item('packages', set_packages.join(", ")) %>
     <%= render_item('osdeps', osdeps.join(", ")) %>
 <% end %>
+</ul>
 

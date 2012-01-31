@@ -1,3 +1,28 @@
+<%
+if !produced_by.empty? || !consumed_by.empty?
+%>
+<table><tr>
+<% if !produced_by.empty? %>
+    <td><ul class="body-header-list half-size" style="margin:0;">"
+    <%= render_item("Produced by") %>
+    <% produced_by.each do |port_model| %>
+        <li><%= link_to(port_model.task) %>.<%= port_model.name %></li>
+    <% end %>
+    </ul></td>
+<% end %>
+<% if !consumed_by.empty? %>
+    <td><ul class="body-header-list half-size" style="margin:0;">"
+    <%= render_item("Consumed by") %>
+    <% consumed_by.each do |port_model| %>
+        <li><%= link_to(port_model.task) %>.<%= port_model.name %></li>
+    <% end %>
+    </ul></td>
+<% end %>
+</tr></table>
+<%
+end
+%>
+
 <h2>General Info</h2>
 <% typekit = Orocos.load_typekit_for(type, false) %>
 <% if typekit.interface_type?(type.name) %>
@@ -7,7 +32,7 @@ This type is <b>exported</b> by the <%= typekit.name %> typekit
     <li>it can be used in other oroGen projects by adding<br/>
     <div class="orogen_spec">
     import_types_from "<%= typekit.name %>"
-    </div>
+    </div></li>
 </ul>
 <% else %>
 This type is <b>not</b> exported by the <%= typekit.name %> typekit
@@ -16,7 +41,7 @@ This type is <b>not</b> exported by the <%= typekit.name %> typekit
     <li>it can be used in other oroGen projects by adding<br/>
     <div class="orogen_spec">
     import_types_from "<%= typekit.name %>"
-    </div>
+    </div></li>
 </ul>
 <% end %>
 

@@ -11,6 +11,12 @@ module Rock
             end
             @templates = Hash.new
 
+            def self.escape_html(string)
+                string.
+                    gsub('<', '&lt;').
+                    gsub('>', '&gt;')
+            end
+
             def self.obscure_email(email)
                 return nil if email.nil? #Don't bother if the parameter is nil.
                 lower = ('a'..'z').to_a
@@ -85,7 +91,13 @@ module Rock
             end
 
             def self.render_object(object, *template_path)
-                context = rendering_context_for(object)
+                if template_path.last.kind_of?(Hash)
+                    options = template_path.pop
+                    options = Kernel.validate_options options,
+                        :context => nil
+                end
+
+                context = options[:context] || rendering_context_for(object)
                 if template_path.empty?
                     template_path = context.default_template
                     if !template_path || template_path.empty?
@@ -109,10 +121,13 @@ module Rock
 
                 # No links by default
                 def link_to(arg)
-                    if arg.respond_to?(:name)
-                        arg.name
-                    else arg.to_s
-                    end
+                    text =
+                        if arg.respond_to?(:name)
+                            arg.name
+                        else arg.to_s
+                        end
+
+                    Doc::HTML.escape_html(text)
                 end
 
                 # No help tips by default, it relies on having specialized
@@ -150,9 +165,13 @@ module Rock
 
                 attr_reader :intermediate_type
                 attr_reader :ruby_type
+                attr_reader :produced_by
+                attr_reader :consumed_by
 
                 def initialize(object)
                     super(object, 'orogen_type_fragment.page')
+                    @produced_by = []
+                    @consumed_by = []
                 end
 
                 def has_convertions?(type, recursive = true)
