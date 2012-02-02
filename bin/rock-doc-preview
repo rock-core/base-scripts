@@ -1,0 +1,93 @@
+#! /usr/bin/env ruby
+
+require 'pp'
+require 'webgen/website'
+require 'Qt'
+require 'digest/sha2'
+require 'pathname'
+require 'find'
+require 'utilrb/logger'
+
+class WebsitePreview
+    extend Logger::Root('WebsitePreview', Logger::WARN)
+
+    attr_reader :source_directory
+    def initialize(source_directory)
+        @source_directory = File.expand_path(source_directory)
+    end
+
+    def rendering_directory
+        if @rendering_directory
+            @rendering_directory
+        else
+            directory_hash = (Digest::SHA2.new << source_directory).to_s
+            @rendering_directory = File.join(ENV['HOME'], ".rock", "doc", directory_hash)
+        end
+    end
+
+    attr_reader :website
+
+    # Prepares a directory in ${HOME}/.rock/doc/ for rendering
+    def prepare
+        target_dir = rendering_directory
+        if !File.directory?(target_dir)
+            WebsitePreview.debug "creating preview rendering directory #{target_dir}"
+            `git clone #{File.join(ENV['ROCK_TEMPLATE_PREFIX'], 'doc')} #{target_dir}`
+        else
+            WebsitePreview.debug "updating preview rendering directory #{target_dir}"
+            Dir.chdir(target_dir) do
+                `git pull`
+            end
+        end
+        @website = Webgen::Website.new(target_dir)
+    end
+
+    # Updates the temporary rendering directory using the data in the source
+    # directory
+    def update_rendering_directory
+        target_dir = rendering_directory
+        source_directory = Pathname.new(self.source_directory)
+        Find.find(source_directory) do |source_path|
+            relative_path = Pathname.new(source_path).relative_path_from(source_directory)
+            target_path = File.join(target_dir, 'src', relative_path)
+            WebsitePreview.debug "source_path=#{source_path} target_path=#{target_path}"
+
+            if File.file?(source_path)
+                source_data = File.read(source_path)
+                if File.file?(File.join(target_dir, relative_path))
+                    next if source_data == File.read(target_path)
+                end
+                WebsitePreview.debug "copied #{source_path} in #{target_path}"
+                File.open(target_path, 'w') { |io| io.write(source_data) }
+            elsif File.directory?(target_path)
+                WebsitePreview.debug "created #{target_path} for #{source_path}"
+                FileUtils.mkdir_p(target_path)
+            end
+        end
+    end
+
+    # Render the actual website
+    def render
+        # Remove the extension definitions from $LOADED_FEATURES so that they
+        # get reloaded
+        target_dir = Pathname.new(rendering_directory)
+        dir = Pathname.new(target_dir)
+        Dir.glob(File.join(target_dir, 'ext', '*')) do |file|
+            $LOADED_FEATURES.delete(Pathname.new(file).relative_path_from(dir).to_s)
+        end
+
+        update_rendering_directory
+        website.render
+    end
+end
+
+website = WebsitePreview.new(ARGV.first)
+website.prepare
+
+while true
+    website.render
+    STDOUT.puts "preview available in #{File.join(website.rendering_directory, 'out', 'index.html')}"
+    STDOUT.puts "press ENTER to update"
+    STDIN.readline
+end
+
