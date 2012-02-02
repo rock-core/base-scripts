@@ -270,10 +270,42 @@ module Rock
                 end
             end
             Orocos.load
+
+            # Load configuration directories
+            find_dirs('config', 'orogen', :order => :specific_last, :all => true).each do |dir|
+                Orocos.conf.load_dir(dir)
+            end
+
+            # Check if the transformer is available. It if is, set it up
+            begin
+                require 'transformer/runtime'
+                if conf_file = find_file('config', 'transforms.rb', :order => :specific_first)
+                    Orocos.transformer.load_conf(conf_file)
+                end
+            rescue LoadError
+            end
+        end
+
+        def self.has_transformer?
+            Orocos.respond_to?(:transformer)
+        end
+
+        def self.method_missing(m, *args, &block)
+            if Orocos.respond_to?(m)
+                Orocos.send(m, *args, &block)
+            else
+                super
+            end
         end
 
         def self.run(*args, &block)
-            Orocos.run(*args, &block)
+            if has_transformer? && Transformer.broadcaster_name
+                Orocos.transformer.start_broadcaster(Transformer.broadcaster_name) do
+                    Orocos.run(*args, &block)
+                end
+            else
+                Orocos.run(*args, &block)
+            end
         end
 
         def self.is_ruby_script?(file)
@@ -289,6 +321,15 @@ module Rock
         def self.initialize
             self.load
             Orocos.initialize
+        end
+
+        # Returns the task context referred to by +name+. Some common
+        # configuration is done on this task, in particular the 'default'
+        # configuration is applied if one is defined for the task's model
+        def self.get(task_name)
+            task = Orocos::TaskContext.get(task_name)
+            Orocos.conf.apply(task, ['default'])
+            task
         end
 
         def self.find_dirs(*args)
