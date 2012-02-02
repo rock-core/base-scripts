@@ -3,7 +3,7 @@ if !produced_by.empty? || !consumed_by.empty?
 %>
 <table><tr>
 <% if !produced_by.empty? %>
-    <td><ul class="body-header-list half-size" style="margin:0;">"
+    <td><ul class="body-header-list half-size" style="margin:0;">
     <%= render_item("Produced by") %>
     <% produced_by.each do |port_model| %>
         <li><%= link_to(port_model.task) %>.<%= port_model.name %></li>
@@ -11,7 +11,7 @@ if !produced_by.empty? || !consumed_by.empty?
     </ul></td>
 <% end %>
 <% if !consumed_by.empty? %>
-    <td><ul class="body-header-list half-size" style="margin:0;">"
+    <td><ul class="body-header-list half-size" style="margin:0;">
     <%= render_item("Consumed by") %>
     <% consumed_by.each do |port_model| %>
         <li><%= link_to(port_model.task) %>.<%= port_model.name %></li>
