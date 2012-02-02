@@ -23,6 +23,41 @@ if !produced_by.empty? || !consumed_by.empty?
 end
 %>
 
+<%
+if !displayed_by.empty?
+%>
+<table><tr>
+    <td><ul class="body-header-list half-size" style="margin:0;">
+    <%= render_item("Displayed by") %>
+    <% displayed_by.each do |widget| %>
+        <% if registration_line = Vizkit.default_loader.registration_files[widget.name]
+               registration_package = Autoproj.manifest.enum_for(:each_package).find do |pkg|
+                   registration_line =~ /^#{Regexp.quote(pkg.srcdir)}/
+               end
+               if registration_package
+                   registration_package = registration_package.name
+               else
+                   if File.basename(registration_line) =~ /(.*)_vizkit.rb$/
+                       package_basename = $1
+                       registration_packages = Autoproj.manifest.enum_for(:each_package).find_all do |pkg|
+                           File.basename(pkg.name) == package_basename
+                       end
+                       registration_package = registration_packages.map(&:name).sort_by(&:size).first
+                   end
+               end
+           end
+           if registration_package
+               registration_package = Autoproj.manifest.package(registration_package)
+           end
+        %>
+        <li><%= link_to(widget) %> (from <%= link_to(registration_package) %>)</li>
+    <% end %>
+    </ul></td>
+</tr></table>
+<%
+end
+%>
+
 <h2>General Info</h2>
 <% typekit = Orocos.load_typekit_for(type, false) %>
 <% if typekit.interface_type?(type.name) %>

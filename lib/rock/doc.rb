@@ -2,6 +2,9 @@ require 'erb'
 module Rock
     module Doc
         OSPackage = Struct.new :name
+        VizkitWidget = Struct.new :name
+        class Vizkit3DWidget < VizkitWidget
+        end
 
         module HTML
             TEMPLATE_DIR = File.expand_path(File.join('templates', 'html'), File.dirname(__FILE__))
@@ -93,9 +96,11 @@ module Rock
             def self.render_object(object, *template_path)
                 if template_path.last.kind_of?(Hash)
                     options = template_path.pop
-                    options = Kernel.validate_options options,
-                        :context => nil
+                else
+                    options = Hash.new
                 end
+                options = Kernel.validate_options options,
+                    :context => nil
 
                 context = options[:context] || rendering_context_for(object)
                 if template_path.empty?
@@ -167,11 +172,13 @@ module Rock
                 attr_reader :ruby_type
                 attr_reader :produced_by
                 attr_reader :consumed_by
+                attr_reader :displayed_by
 
                 def initialize(object)
                     super(object, 'orogen_type_fragment.page')
                     @produced_by = []
                     @consumed_by = []
+                    @displayed_by = []
                 end
 
                 def has_convertions?(type, recursive = true)
