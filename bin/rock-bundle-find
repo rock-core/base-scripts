@@ -13,7 +13,7 @@ name = parser.parse(ARGV).first || '.'
 full_path = File.expand_path(name)
 if File.directory?(full_path)
     if bdl = Bundles.find_bundle_from_dir(full_path)
-        if registered = Bundles.each_bundle.find { |b| b.path == full_path }
+        if registered = Bundles.each_bundle.find { |b| b.registered? && (b.path == full_path) }
             puts registered.name
         else
             puts bdl.path

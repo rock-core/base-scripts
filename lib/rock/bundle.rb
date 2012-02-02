@@ -37,6 +37,15 @@ module Rock
             #
             # Configuration in bundles
             attr_reader :config
+            # Returns true if this bundle can be found through the
+            # ROCK_BUNDLE_PATH or if it must be referred to through its full
+            # path
+            def registered?
+                paths = (ENV['ROCK_BUNDLE_PATH'] || '').split(":")
+                paths.any? do |p|
+                    p == path || path =~ /^#{Regexp.quote(p)}/
+                end
+            end
 
             def initialize(path)
                 @name = File.basename(path)
