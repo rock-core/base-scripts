@@ -81,7 +81,18 @@ class WebsitePreview
     end
 end
 
-website = WebsitePreview.new(ARGV.first)
+do_delete = false
+options_parser = OptionParser.new do |opt|
+    opt.on('--delete', 'delete the current cached version of the website') do
+        do_delete = true
+    end
+end
+
+options = options_parser.parse(ARGV)
+website = WebsitePreview.new(options.first)
+if do_delete
+    FileUtils.rm_rf website.rendering_directory
+end
 website.prepare
 
 while true
