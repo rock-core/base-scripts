@@ -17,6 +17,7 @@ def disable_all
     @search_filter[:no_types] = true
     @search_filter[:no_widgets] = true
     @search_filter[:no_plugins] = true
+    @search_filter[:no_projects] = true
 end
 
 parser = OptionParser.new do |opt|
@@ -29,7 +30,7 @@ usage: rock-inspect <search term>
  the matching objects.
 
 Examples:
- rock-inspect camera --show_deplyoments
+ rock-inspect camera --show_deployments
  rock-inspect -t camera -T FramePair --show_tasks
 
     EOT
@@ -46,6 +47,9 @@ Examples:
     end
     opt.on('-d', '--deployments DEPLOYMENTS', 'if given, will filter out all items which are not related to DEPLOYMENTS.') do |deployment|
         @search_filter[:deployments] = /#{deployment}/
+    end
+    opt.on('-D', '--projects PROJECTS', 'if given, will filter out all items which are not related to (deployment-)PROJECTS.') do |projects|
+        @search_filter[:projects] = /#{projects}/
     end
     opt.on('-P', '--ports PORTS', 'if given, will filter out all items which are not related to PORTS.') do |port|
         @search_filter[:ports] = /#{port}/
@@ -75,6 +79,10 @@ Examples:
     opt.on('--show-deployments','if given, will only display deployments. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_deployments
         @search_filter.delete :no_deployments
+    end
+    opt.on('--show-projects','if given, will only display projects. Can be combined with other show options.') do
+        disable_all unless @search_filter.has_key? :no_projects
+        @search_filter.delete :no_projects
     end
 
     if Rock::Inspect.has_vizkit?
@@ -142,5 +150,6 @@ if result.empty?
     STDERR.puts " filter ports = #{@search_filter[:ports]}" if @search_filter.has_key?(:ports)
     STDERR.puts " filter types = #{@search_filter[:types]}" if @search_filter.has_key?(:types)
     STDERR.puts " filter widgets = #{@search_filter[:widgets]}" if @search_filter.has_key?(:widgets)
+    STDERR.puts " filter projects = #{@search_filter[:projects]}" if @search_filter.has_key?(:projects)
 end
 

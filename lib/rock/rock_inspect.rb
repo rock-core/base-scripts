@@ -53,7 +53,7 @@ module Rock
         end
 
         def self.find(pattern,filter = Hash.new)
-            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_widgets,:no_plugins])
+            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_projects,:no_widgets,:no_plugins])
             result = Array.new
 
             #search for types
@@ -96,6 +96,15 @@ module Rock
                 reg = filter.has_key?(:plugins) ? filter[:plugins] : pattern
                 reg = /./ unless reg
                 result += Rock::Inspect::find_plugins(/#{reg}/, filter)
+            end
+
+            # Search for projects that have no tasks, but only deployments defined
+            # Last entry before producing the result, to allow operation on the 
+            # already contrained project list
+            if !options[:no_projects]
+                reg = filter.has_key?(:projects) ? filter[:projects] : pattern
+                reg = /./ unless reg
+                result += Rock::Inspect::find_projects(/#{reg}/,filter)
             end
 
             result.uniq.sort_by(&:name)
@@ -176,7 +185,7 @@ module Rock
 
         def self.find_deployments(pattern,filter=Hash.new)
             found = []
-            filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deplyoments])
+            filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deployments])
             return found if !unkown.empty?
             Orocos.available_deployments.each do |name, pkg|
                 project_name = pkg.project_name
@@ -188,6 +197,40 @@ module Rock
                                                         :project_name => project_name,
                                                             :object => deployer)
                             end
+                        end
+                    end
+                end
+            end
+            found.sort_by{|t|t.name}
+        end
+
+        def self.find_projects(pattern, filter=Hash.new)
+            found = []
+            filter,unknown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deployments,:projects])
+            return found if !unknown.empty?
+
+            # Check whether there have been already search filters set, 
+            # meaning that the resulting project list should be a subset of those
+            use_whitelist = false
+            if !(filter.has_key?(:projects) && filter.size == 1)
+                use_whitelist = true
+            end
+          
+            # Either use all available projects or subset, as defined by the previous contrains 
+            projects=Array.new
+            if !use_whitelist 
+                Orocos.available_projects.each {|name,project| projects << name}
+            else
+                found.each {|item| projects << item.name }
+            end
+
+            projects.each do |name|
+                if project_match?(name,pattern,filter)
+                    if tasklib = load_orogen_project(@master_project, name, Rock::Inspect::debug)
+                        tasklib.deployers.each do |deployment|
+                                found << SearchItem.new(:name => "Deployment::#{deployment.name}",
+                                                        :project_name => name,
+                                                        :object => deployment)
                         end
                     end
                 end
@@ -236,6 +279,12 @@ module Rock
             return false if (filter.has_key?(:deployments) && !(deployment.name =~ filter[:deployments]))
             return false if (deployment.task_activities.all?{|t| !( task_match?(t.task_model,//,filter))})
             true
+        end
+
+        def self.project_match?(project_name,pattern,filter = Hash.new)
+            return true if (project_name =~ pattern)
+            return true if (filter.has_key?(:projects) && (project_name =~ filter[:projects]))
+            false
         end
 
         def self.plugin_match?(plugin,pattern,filter = Hash.new)
