@@ -138,7 +138,8 @@ module Rock
             end
 
             paths.each do |path|
-                if is_bundle_path?(path)
+                if !File.directory?(path)
+                elsif is_bundle_path?(path)
                     yield(Bundle.new(path))
                 else
                     Dir.new(path).each do |f|
