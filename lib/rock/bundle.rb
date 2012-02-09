@@ -300,6 +300,18 @@ module Rock
         end
 
         def self.run(*args, &block)
+            options =
+                if args.last.kind_of?(Hash)
+                    args.pop
+                else Hash.new
+                end
+
+            options, other_options = Kernel.filter_options options, :output
+            if !options[:output]
+                options[:output] = File.join(Bundles.log_dir, "%m-%p.txt")
+            end
+
+            args.push(other_options.merge(options))
             if has_transformer? && Transformer.broadcaster_name
                 Orocos.transformer.start_broadcaster(Transformer.broadcaster_name) do
                     Orocos.run(*args, &block)
@@ -322,6 +334,8 @@ module Rock
         def self.initialize
             self.load
             Orocos.initialize
+            FileUtils.mkdir_p Bundles.log_dir
+            Bundles.info "log files are going in #{Bundles.log_dir}"
         end
 
         # Returns the task context referred to by +name+. Some common
@@ -344,6 +358,9 @@ module Rock
         end
         def self.find_files_in_dirs(*args)
             Roby.app.find_files_in_dirs(*args)
+        end
+        def self.log_dir
+            Roby.app.log_dir
         end
     end
 end
