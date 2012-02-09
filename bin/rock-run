@@ -2,7 +2,6 @@
 
 require 'rock/bundle'
 
-Roby::Application.logger.level = Logger::DEBUG
 Rock::Bundles.load
 filename =
     if File.file?(ARGV.first)
