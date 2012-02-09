@@ -1,4 +1,3 @@
-require 'orocos'
 require 'roby'
 require 'utilrb/logger'
 require 'pathname'
@@ -270,6 +269,7 @@ module Rock
                     $LOAD_PATH.unshift libdir
                 end
             end
+            require 'orocos'
             Orocos.load
 
             # Load configuration directories
