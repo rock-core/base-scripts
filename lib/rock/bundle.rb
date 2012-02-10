@@ -347,10 +347,26 @@ module Rock
             task
         end
 
+        def self.change_default_options(args, defaults)
+            args = args.dup
+            if args.last.kind_of?(Hash)
+                with_defaults, other = Kernel.filter_options args.pop, defaults
+                args.push(with_defaults.merge(other))
+            else
+                args.push(defaults)
+            end
+            args
+        end
+
         def self.find_dirs(*args)
             Roby.app.find_dirs(*args)
         end
+        def self.find_dir(*args)
+            args = change_default_options(args, :order => :specific_first)
+            Roby.app.find_dir(*args)
+        end
         def self.find_file(*args)
+            args = change_default_options(args, :order => :specific_first)
             Roby.app.find_file(*args)
         end
         def self.find_files(*args)
