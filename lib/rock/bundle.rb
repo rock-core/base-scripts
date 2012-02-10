@@ -333,9 +333,9 @@ module Rock
         # Initializes the bundle support, and initializes the orocos layer
         def self.initialize
             self.load
-            Orocos.initialize
-            FileUtils.mkdir_p Bundles.log_dir
+            Roby.app.setup_dirs
             Bundles.info "log files are going in #{Bundles.log_dir}"
+            Orocos.initialize
         end
 
         # Returns the task context referred to by +name+. Some common
