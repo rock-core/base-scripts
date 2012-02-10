@@ -306,12 +306,12 @@ module Rock
                 else Hash.new
                 end
 
-            options, other_options = Kernel.filter_options options, :output
-            if !options[:output]
-                options[:output] = File.join(Bundles.log_dir, "%m-%p.txt")
-            end
+            output_options, options = Kernel.filter_options options,
+                :working_directory => Bundles.log_dir,
+                :output => "%m-%p.txt"
+            options = options.merge(output_options)
 
-            args.push(other_options.merge(options))
+            args.push(options)
             if has_transformer? && Transformer.broadcaster_name
                 Orocos.transformer.start_broadcaster(Transformer.broadcaster_name) do
                     Orocos.run(*args, &block)
