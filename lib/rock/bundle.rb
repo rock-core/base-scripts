@@ -313,7 +313,7 @@ module Rock
 
             args.push(options)
             if has_transformer? && Transformer.broadcaster_name
-                Orocos.transformer.start_broadcaster(Transformer.broadcaster_name) do
+                Orocos.transformer.start_broadcaster(Transformer.broadcaster_name, output_options) do
                     Orocos.run(*args, &block)
                 end
             else
