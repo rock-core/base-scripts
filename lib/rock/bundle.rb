@@ -384,3 +384,14 @@ module Rock
 end
 
 Bundles = Rock::Bundles
+
+at_exit do
+    if File.directory?(Bundles.log_dir)
+        contents = Dir.new(Bundles.log_dir).to_a - %w{. ..}
+        if contents.empty?
+            Bundles.debug "removing empty log dir #{Bundles.log_dir}"
+            FileUtils.rmdir Bundles.log_dir
+        end
+    end
+end
+
