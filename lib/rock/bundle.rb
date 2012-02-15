@@ -269,7 +269,9 @@ module Rock
                     $LOAD_PATH.unshift libdir
                 end
             end
+
             require 'orocos'
+            ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
             Orocos.load
 
             # Load configuration directories
