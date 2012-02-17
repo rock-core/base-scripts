@@ -271,6 +271,8 @@ module Rock
             end
 
             require 'orocos'
+            FileUtils.mkdir_p Bundles.log_dir
+            Orocos.default_working_directory = Bundles.log_dir
             ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
             Orocos.load
 
@@ -302,6 +304,7 @@ module Rock
         end
 
         def self.run(*args, &block)
+            # Process the given options to override some of the defaults
             options =
                 if args.last.kind_of?(Hash)
                     args.pop
@@ -309,7 +312,6 @@ module Rock
                 end
 
             output_options, options = Kernel.filter_options options,
-                :working_directory => Bundles.log_dir,
                 :output => "%m-%p.txt"
             options = options.merge(output_options)
 
