@@ -88,6 +88,28 @@ module Rock
             find_bundle_from_dir(Dir.pwd)
         end
 
+        # Selects the current bundle, regardless of the global configuration
+        #
+        # Raises ArgumentError if the current directory is not a bundle, or is
+        # not contained in one
+        #
+        # This is meant to be mostly used in test scripts
+        def self.select_current
+            select(Dir.pwd)
+        end
+        
+        # Select the bundle pointed-to by +directory+, or the bundle that
+        # contains directory
+        #
+        # Raises ArgumentError if +directory+ is not part of a bundle
+        def self.select(directory)
+            if current_bundle = find_bundle_from_dir(Dir.pwd)
+                ENV['ROCK_BUNDLE'] = current_bundle.path
+            else
+                raise ArgumentError, "#{directory} is not contained in a bundle"
+            end
+        end
+
         # Find the bundle that contains the provided directory
         #
         # Returns nil if there is none
