@@ -404,6 +404,15 @@ module Rock
         def self.log_dir
             Roby.app.log_dir
         end
+
+        # If true, the logs are going to be kept. Otherwise, the log folder is
+        # going to be deleted on shutdown
+        def self.public_logs?
+            Roby.app.public_logs?
+        end
+
+        # Unlike in Roby, all logs are public by default except in rock-roby
+        Roby.app.public_logs = true
     end
 end
 
@@ -411,9 +420,14 @@ Bundles = Rock::Bundles
 
 at_exit do
     if File.directory?(Bundles.log_dir)
-        contents = Dir.new(Bundles.log_dir).to_a - %w{. ..}
-        if contents.empty?
-            Bundles.debug "removing empty log dir #{Bundles.log_dir}"
+        if Bundles.public_logs?
+            contents = Dir.new(Bundles.log_dir).to_a - %w{. ..}
+            if contents.empty?
+                Bundles.info "removing empty log dir #{Bundles.log_dir}"
+                FileUtils.rmdir Bundles.log_dir
+            end
+        else
+            Bundles.debug "removing log dir #{Bundles.log_dir} as public_logs? is false"
             FileUtils.rmdir Bundles.log_dir
         end
     end
