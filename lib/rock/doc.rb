@@ -78,6 +78,8 @@ module Rock
 
             def self.rendering_context_for(object)
                 case object
+                when Autoproj::PackageDefinition
+                    PackageRenderingContext.new(object)
                 when Autoproj::VCSDefinition
                     VCSRenderingContext.new(object)
                 when Orocos::Spec::TaskContext
@@ -155,6 +157,15 @@ module Rock
 
                 def render_object(object, *template_path)
                     HTML.render_object(object, *template_path)
+                end
+            end
+
+            class PackageRenderingContext < RenderingContext
+                def has_api?(pkg)
+                    false
+                end
+                def api_link(pkg, text)
+                    nil
                 end
             end
 

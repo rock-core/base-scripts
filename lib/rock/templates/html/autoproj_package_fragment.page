@@ -12,6 +12,11 @@
             join(" ")
     end
 
+    api =
+        if has_api?(pkg)
+            api_link(pkg, "API Documentation")
+        end
+
     all_opt_deps = pkg.optional_dependencies.to_set
     pkg_opt_deps, ospkg_opt_deps, disabled = pkg.partition_optional_dependencies
     pkg_deps = pkg.dependencies.
@@ -52,6 +57,7 @@
     <%= render_item('authors', authors || '') %>
     <%= render_item('license', license || '') %>
     <%= render_item('URL', urls || '') %>
+    <%= render_item(api) if api %>
     <%= render_item('mandatory dependencies', pkg_deps) %>
     <%= render_item('optional dependencies', pkg_opt_deps) %>
     <%= render_item('mandatory OS dependencies', ospkg_deps) %>
