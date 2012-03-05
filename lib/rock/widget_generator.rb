@@ -2,6 +2,7 @@
 
 require 'erb'
 require 'fileutils.rb'
+require 'rock/templates/widget_generator/templates'
 
 module Rock
 
@@ -13,7 +14,7 @@ module Rock
     # @author Allan E. Conquest - allan.conquest@dfki.de
     #
     class DesignerPluginGenerator
-        require 'rock/templates/widget_generator/templates'
+      
         @data = nil
         
         def initialize( widget_klassname, icon_path, whats_this )
@@ -48,7 +49,6 @@ module Rock
           
           ## Adapt file/folder layout for our purposes.
           
-          file = nil
           begin
             # Source folder. If it already exists: backup by renaming.
             if File.exist?(src_path)
@@ -83,6 +83,7 @@ module Rock
           
         end
         
+        # Fills template with data, parses template and returns result string.
         def erb_result(template, data)
           ERB.new(template, nil, "%<>").result(data.get_binding)
         end
@@ -97,15 +98,13 @@ module Rock
 private
 
     # Template data
-    # Contains relevant information about the designer plugin to be generated.
+    # Contains relevant information the widget and designer plugin to be generated.
     class DesignerPluginData
       attr_reader :plugin_klassname
       attr_reader :widget_klassname
       attr_reader :test_binary_name
       attr_reader :icon_path
       attr_reader :whats_this
-      
-      @base_path = nil
       
       def initialize( widget_klassname, icon_path, whats_this )
         @widget_klassname = widget_klassname
