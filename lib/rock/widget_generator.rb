@@ -84,7 +84,7 @@ module Rock
         end
         
         def erb_result(template, data)
-          ERB.new(template).result(data.get_binding)
+          ERB.new(template, nil, "%<>").result(data.get_binding)
         end
 
         def write_file(path, content)
