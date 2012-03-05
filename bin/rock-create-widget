@@ -5,15 +5,23 @@ require 'ostruct'
 require 'rock/widget_generator'
 
 @usage = "Usage: rock-create-widget [options] WIDGET_NAME"
-@usage_general = "#{@usage}\nCheck option --help for more information."
+@usage_general = "#{@usage}\nUse option --help for further information."
 
 # Options and their default values
 @options = OpenStruct.new
 @options.icon_path = ""
 
 opts = OptionParser.new do |opts|
-    opts.banner = @usage
     
+    info = <<-EOT
+Rock Widget and Designer Plugin Generator
+
+This program generates the essential files needed to implement a Qt4 Widget. 
+A plugin for Qt Designer is being prepared as well.
+EOT
+    opts.banner = info + "\n" + @usage
+    
+    opts.separator ""
     opts.separator "Options:"
     
     # Mandatory argument.
