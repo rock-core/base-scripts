@@ -1,4 +1,6 @@
 module Rock
+  
+# ERB Templates for Rock::DesignerPluginGenerator (used by rock-create-widget)
 module WidgetTemplate
 
 CMAKE = 
@@ -37,8 +39,8 @@ rock_executable(<%= test_binary_name %>
                 main.cpp
                 DEPS <%= @widget_klassname %>)
 }
-
 # ------------------------------------------------------------------------------
+
 QRC =
 %{<!DOCTYPE RCC><RCC version="1.0">
 <qresource>
@@ -49,6 +51,7 @@ QRC =
 </RCC>
 }
 # ------------------------------------------------------------------------------
+
 PLUGIN_HEADER = 
 %{#ifndef <%= @plugin_klassname.upcase %>_H
 #define <%= @plugin_klassname.upcase %>_H
@@ -84,6 +87,7 @@ private:
 #endif /* <%= @plugin_klassname.upcase %>_H */  
 }
 # ------------------------------------------------------------------------------
+
 PLUGIN_SOURCE =
 %{#include "<%= @plugin_klassname %>.h"
 #include "<%= @widget_klassname %>.h"
@@ -171,6 +175,7 @@ void <%= @plugin_klassname %>::initialize(QDesignerFormEditorInterface *core)
 }
 }
 # ------------------------------------------------------------------------------
+
 WIDGET_HEADER =
 %{#ifndef <%= @widget_klassname.upcase %>_H
 #define <%= @widget_klassname.upcase %>_H
@@ -188,6 +193,7 @@ public:
 #endif /* <%= @widget_klassname.upcase %>_H */
 }
 # ------------------------------------------------------------------------------
+
 WIDGET_SOURCE =
 %{#include "<%= @widget_klassname %>.h"
 
@@ -212,6 +218,7 @@ WIDGET_SOURCE =
 }
 }
 # ------------------------------------------------------------------------------
+
 WIDGET_TEST_SOURCE =
 %{#include <QtGui/QApplication>
 
