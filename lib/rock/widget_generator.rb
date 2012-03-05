@@ -34,6 +34,7 @@ module Rock
           
           # How to rename an already existing folder
           old_folder_suffix = ".old/"
+          old_src_path = src_path.chop + old_folder_suffix
           
           # Widget resource directory
           qrc_path = src_path + "resources/"
@@ -51,9 +52,15 @@ module Rock
           begin
             # Source folder. If it already exists: backup by renaming.
             if File.exist?(src_path)
-              FileUtils.mv(src_path, src_path.chop + old_folder_suffix)
+              FileUtils.mv(src_path, old_src_path)
             end
             Dir.mkdir(src_path)
+            
+            # Copy package file (.pc.in) back to src folder
+            package_filename = data.widget_klassname + ".pc.in"
+            if File.exist?(old_src_path + package_filename)
+              FileUtils.mv(old_src_path + package_filename, src_path + package_filename)
+            end
 
             # Resource folder. If it already exists: backup by renaming.
             if File.exist?(qrc_path)
