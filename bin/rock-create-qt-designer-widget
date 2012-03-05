@@ -4,7 +4,7 @@ require 'optparse'
 require 'ostruct'
 require 'rock/widget_generator'
 
-@usage = "Usage: rock-create-widget [options] WIDGET_NAME"
+@usage = "Usage: rock-create-qt-designer-widget [options] WIDGET_NAME"
 @usage_general = "#{@usage}\nUse option --help for further information."
 
 # Options and their default values
