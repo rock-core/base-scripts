@@ -110,9 +110,14 @@ if remaining.empty? && @search_filter.empty?
     exit(1)
 end
 
-Orocos.load
-remaining = remaining.join("|")
-result = Rock::Inspect.find(remaining, @search_filter)
+begin
+    Orocos.load
+    remaining = remaining.join("|")
+    result = Rock::Inspect.find(remaining, @search_filter)
+rescue Interrupt
+    Orocos.warn "Interrupted"
+    exit 1
+end
 
 views = result.map do |item|
     case item.object
