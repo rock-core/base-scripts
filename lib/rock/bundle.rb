@@ -1,4 +1,4 @@
-require 'roby'
+require 'roby/app'
 require 'utilrb/logger'
 require 'pathname'
 
