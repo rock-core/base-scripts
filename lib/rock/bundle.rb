@@ -293,6 +293,7 @@ module Rock
             end
 
             require 'orocos'
+            Bundles.log_dir_created = !File.directory?(Bundles.log_dir)
             FileUtils.mkdir_p Bundles.log_dir
             Orocos.default_working_directory = Bundles.log_dir
             ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
@@ -412,8 +413,17 @@ module Rock
             Roby.app.public_logs?
         end
 
+        def self.public_logs=(value)
+            Roby.app.public_logs = false
+        end
+
         # Unlike in Roby, all logs are public by default except in rock-roby
         Roby.app.public_logs = true
+
+        class << self
+            attr_predicate :log_dir_created?, true
+        end
+        @log_dir_created = false
     end
 end
 
@@ -427,9 +437,11 @@ at_exit do
                 Bundles.info "removing empty log dir #{Bundles.log_dir}"
                 FileUtils.rmdir Bundles.log_dir
             end
-        else
+        elsif Bundles.log_dir_created?
             Bundles.debug "removing log dir #{Bundles.log_dir} as public_logs? is false"
             FileUtils.rm_rf Bundles.log_dir
+        else
+            Bundles.info "not removing log dir #{Bundles.log_dir} even though public_logs? is false, as the directory was already existing"
         end
     end
 end
