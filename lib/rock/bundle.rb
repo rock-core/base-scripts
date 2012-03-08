@@ -1,6 +1,7 @@
 require 'roby/app'
 require 'utilrb/logger'
 require 'pathname'
+require 'yaml'
 
 module Rock
     # Bundle support
