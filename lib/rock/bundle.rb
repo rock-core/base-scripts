@@ -251,16 +251,18 @@ module Rock
                     end
                 end
 
-            if !current_bundle
+            if current_bundle
+                selected_bundles = discover_dependencies(current_bundle)
+                Bundles.info "Active bundles: #{selected_bundles.map(&:name).join(", ")}"
+            else
                 Bundles.info "No bundle currently selected"
-                return
+                current_bundle = Bundle.new(Dir.pwd)
+                selected_bundles = [current_bundle]
             end
 
-            selected_bundles = discover_dependencies(current_bundle)
             selected_bundles.each do |b|
                 $LOAD_PATH.unshift(b.path) unless $LOAD_PATH.include?(b.path)
             end
-            Bundles.info "Active bundles: #{selected_bundles.map(&:name).join(", ")}"
 
             # Check if the current directory is in a bundle, and if it is the
             # case if that bundle is part of the selection. Otherwise, issue a
