@@ -47,8 +47,8 @@ module Rock
                 if Rock::Inspect::debug
                     raise
                 end
-                STDERR.puts "WARN: cannot load the installed oroGen project #{name}"
-                STDERR.puts "WARN:     #{e.message}"
+                Orocos.warn "cannot load the installed oroGen project #{name}"
+                Orocos.warn "     #{e.message}"
             end
         end
 
