@@ -43,6 +43,7 @@ module Rock
         def self.load_orogen_project(master_project, name, debug)
             begin
                 master_project.load_orogen_project(name)
+            rescue Interrupt; raise
             rescue Exception => e
                 if Rock::Inspect::debug
                     raise
