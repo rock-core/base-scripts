@@ -284,7 +284,6 @@ module Rock
                 end
             end
 
-
             Roby.app.app_dir = current_bundle.path
             Roby.app.search_path = selected_bundles.map(&:path)
             selected_bundles.each do |b|
@@ -295,7 +294,13 @@ module Rock
             end
 
             require 'orocos'
-            Bundles.log_dir_created = !File.directory?(Bundles.log_dir)
+
+            dir = Bundles.log_dir
+            while !File.directory?(dir)
+                Bundles.log_dir_created << dir
+                dir = File.dirname(dir)
+            end
+
             FileUtils.mkdir_p Bundles.log_dir
             Orocos.default_working_directory = Bundles.log_dir
             ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
@@ -423,27 +428,28 @@ module Rock
         Roby.app.public_logs = true
 
         class << self
-            attr_predicate :log_dir_created?, true
+            attr_reader :log_dir_created
         end
-        @log_dir_created = false
+        @log_dir_created = []
     end
 end
 
 Bundles = Rock::Bundles
 
 at_exit do
-    if File.directory?(Bundles.log_dir)
+    created_dirs = Bundles.log_dir_created
+    created_dirs.each do |dir|
+        next if !File.directory?(dir)
+
         if Bundles.public_logs?
-            contents = Dir.new(Bundles.log_dir).to_a - %w{. ..}
+            contents = Dir.new(dir).to_a - %w{. ..}
             if contents.empty?
-                Bundles.info "removing empty log dir #{Bundles.log_dir}"
-                FileUtils.rmdir Bundles.log_dir
+                Bundles.debug "removing empty log dir #{dir}"
+                FileUtils.rmdir dir
             end
-        elsif Bundles.log_dir_created?
-            Bundles.debug "removing log dir #{Bundles.log_dir} as public_logs? is false"
-            FileUtils.rm_rf Bundles.log_dir
         else
-            Bundles.info "not removing log dir #{Bundles.log_dir} even though public_logs? is false, as the directory was already existing"
+            Bundles.debug "removing log dir #{dir} as public_logs? is false"
+            FileUtils.rm_rf dir
         end
     end
 end
