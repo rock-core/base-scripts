@@ -369,7 +369,9 @@ module Rock
         def self.initialize
             self.load
             Roby.app.setup_dirs
-            Bundles.info "log files are going in #{Bundles.log_dir}"
+            if Bundles.public_logs?
+                Bundles.info "log files are going in #{Bundles.log_dir}"
+            end
             Orocos.initialize
         end
 
