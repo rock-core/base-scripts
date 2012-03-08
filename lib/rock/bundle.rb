@@ -429,7 +429,7 @@ at_exit do
             end
         else
             Bundles.debug "removing log dir #{Bundles.log_dir} as public_logs? is false"
-            FileUtils.rmdir Bundles.log_dir
+            FileUtils.rm_rf Bundles.log_dir
         end
     end
 end
