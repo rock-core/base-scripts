@@ -1,0 +1,44 @@
+#! /usr/bin/env ruby
+
+require 'optparse'
+require 'ostruct'
+require 'rock/widget_generator'
+
+@usage = "Usage: rock-create-qt-designer-widget [options] WIDGET_NAME"
+@usage_general = "#{@usage}\nUse option --help for further information."
+
+# Options and their default values
+@options = OpenStruct.new
+@options.icon_path = ""
+
+opts = OptionParser.new do |opts|
+    
+    info = <<-EOT
+Rock Widget and Designer Plugin Generator
+
+This program generates the essential files needed to implement a Qt4 Widget. 
+A plugin for Qt Designer is being prepared as well.
+EOT
+    opts.banner = info + "\n" + @usage
+    
+    opts.separator ""
+    opts.separator "Options:"
+    
+    # Mandatory argument.
+    opts.on("-i", "--icon_path PATH",
+            "Path to the icon to be displayed in the Designer's toolbox") do |path|
+        @options.icon_path = path
+    end
+  
+end.parse!
+
+# Widget name specified?
+if ARGV.length != 1
+    puts @usage_general
+    exit
+end
+
+# Generate widget and designer plugin from arguments and options
+Rock::DesignerPluginGenerator.new(ARGV[0], @options.icon_path, ARGV[0]).generate
+
+puts "Finished. Please update the manifest.xml with package dependencies and other useful information."
