@@ -286,6 +286,7 @@ module Rock
             end
 
             Roby.app.app_dir = current_bundle.path
+            Roby.app.load_config_yaml
             Roby.app.search_path = selected_bundles.map(&:path)
             selected_bundles.each do |b|
                 libdir = File.join(b.path, "lib")
@@ -305,6 +306,12 @@ module Rock
             FileUtils.mkdir_p Bundles.log_dir
             Orocos.default_working_directory = Bundles.log_dir
             ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
+
+            # Load configuration directories
+            find_dirs('models', 'orogen', :order => :specific_last, :all => true).each do |dir|
+                Orocos.register_orogen_files(dir)
+            end
+
             Orocos.load
 
             # Load configuration directories
