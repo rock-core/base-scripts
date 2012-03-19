@@ -50,6 +50,7 @@ module Rock
                 end
                 Orocos.warn "cannot load the installed oroGen project #{name}"
                 Orocos.warn "     #{e.message}"
+                nil
             end
         end
 
