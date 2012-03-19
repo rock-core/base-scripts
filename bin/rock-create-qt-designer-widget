@@ -40,3 +40,5 @@ end
 
 # Generate widget and designer plugin from arguments and options
 Rock::DesignerPluginGenerator.new(ARGV[0], @options.icon_path, ARGV[0]).generate
+
+puts "Finished. Please update the manifest.xml with package dependencies and other useful information."
