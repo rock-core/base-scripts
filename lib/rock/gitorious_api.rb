@@ -62,6 +62,11 @@ class Gitorious
         raw_file(path)
     end
 
+    #return http url to repositiory
+    def repository_url(repositiory)
+        http_uri + repositiory.path
+    end
+
     #returns the raw file from http address 
     def raw_file(path)
         good_path = path.gsub(/ /, '-')
