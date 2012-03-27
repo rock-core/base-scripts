@@ -64,8 +64,8 @@ class Gitorious
 
     #returns the raw file from http address 
     def raw_file(path)
-        puts path
-        url = URI.parse(path)
+        good_path = path.gsub(/ /, '-')
+        url = URI.parse(good_path)
         res = Net::HTTP.get_response(url)
         return res.body
     end
