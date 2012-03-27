@@ -16,14 +16,21 @@ class Gitorious
     #returns all projects which are hosted at @http_uri
     def projects(filter=nil)
         array = Array.new
-        body = raw_file(http_uri+'/projects')
-        reg = Regexp.new(filter) if filter
-        body.scan(/<h3><a href="(.*)">(.*)<\/a><\/h3>/) do |path,name|
-            if reg
-                array << NamePath.new(name,path) if name.match(reg)
-            else
-                array << NamePath.new(name,path)
+        i = 1;
+        new_data = true
+        while(new_data)
+            new_data = false
+            body = raw_file(http_uri+"/projects?page=#{i}")
+            reg = Regexp.new(filter) if filter
+            body.scan(/<h3><a href="(.*)">(.*)<\/a><\/h3>/) do |path,name|
+                if reg
+                    array << NamePath.new(name,path) if name.match(reg)
+                else
+                    array << NamePath.new(name,path)
+                end
+                new_data = true
             end
+            i = i + 1
         end
         return array
     end
