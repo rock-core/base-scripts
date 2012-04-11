@@ -59,7 +59,7 @@ class WebsitePreview
                 end
                 WebsitePreview.debug "copied #{source_path} in #{target_path}"
                 File.open(target_path, 'w') { |io| io.write(source_data) }
-            elsif File.directory?(target_path)
+            elsif File.directory?(source_path)
                 WebsitePreview.debug "created #{target_path} for #{source_path}"
                 FileUtils.mkdir_p(target_path)
             end
