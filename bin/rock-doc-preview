@@ -83,6 +83,9 @@ end
 
 do_delete = false
 options_parser = OptionParser.new do |opt|
+    opt.on('--debug', 'delete the current cached version of the website') do
+        WebsitePreview.logger.level = Logger::DEBUG
+    end
     opt.on('--delete', 'delete the current cached version of the website') do
         do_delete = true
     end
