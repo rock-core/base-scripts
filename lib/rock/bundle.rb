@@ -384,6 +384,10 @@ module Rock
 
         # Initializes the bundle support, and initializes the orocos layer
         def self.initialize
+            if Orocos.initialized?
+                raise ArgumentError, "Orocos.initialize has already been called. Do not call Orocos.initialize and Bundles.initialize multiple times"
+            end
+
             self.load
             Roby.app.setup_dirs
             if Bundles.public_logs?
