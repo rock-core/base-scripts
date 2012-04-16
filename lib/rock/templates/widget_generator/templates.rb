@@ -34,10 +34,6 @@ rock_vizkit_widget(<%= @widget_klassname %>
     DEPS_CMAKE
     LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${QT_QTDESIGNER_LIBRARY}
 )
-
-rock_executable(<%= test_binary_name %>
-                main.cpp
-                DEPS <%= @widget_klassname %>)
 }
 # ------------------------------------------------------------------------------
 
@@ -142,7 +138,7 @@ QString <%= @plugin_klassname %>::domXml() const
 }
 
 QString <%= @plugin_klassname %>::group() const {
-    return "<%= @widget_klassname %>";
+    return "Rock-Robotics";
 }
 
 QString <%= @plugin_klassname %>::includeFile() const {
@@ -233,6 +229,45 @@ int main(int argc, char *argv[])
 
     return app.exec();
 }
+}
+# ------------------------------------------------------------------------------
+
+WIDGET_RUBY_INTEGRATION =
+%{
+Vizkit::UiLoader::extend_cplusplus_widget_class "<%= @widget_klassname %>" do
+
+    #called when the widget is created
+    def initialize_vizkit_extension
+        #activate Typelib transport via qt slots
+        extend QtTypelibExtension
+    end
+
+    #called each time vizkit wants to display a new 
+    #port with this widget
+    def config(value,options)
+
+    end
+
+    #called each time new data are available on the 
+    #orocos port connected to the widget the name is
+    #custom and can be set via register_widget_for
+    def update(sample,port_name)
+        #mySlot(sample)
+    end
+end
+
+# register widget for a specific Typelib type to be 
+# accessible via rock tooling (rock-replay,...)
+# multiple register_widget_for are allowed for each widget
+# Vizkit::UiLoader.register_widget_for("<%= @widget_klassname %>","/base/Angle",:update)
+}
+# ------------------------------------------------------------------------------
+TEST_SCRIPT =
+%{
+require "vizkit"
+widget = Vizkit.default_loader.<%= @widget_klassname %>
+widget.show
+Vizkit.exec
 }
 # ------------------------------------------------------------------------------
 
