@@ -93,13 +93,6 @@ module Rock
                 result += Rock::Inspect::find_widgets(/#{reg}/, filter)
             end
 
-            #search for plugins
-            if !options[:no_plugins]
-                reg = filter.has_key?(:plugins) ? filter[:plugins] : pattern
-                reg = /./ unless reg
-                result += Rock::Inspect::find_plugins(/#{reg}/, filter)
-            end
-
             # Search for projects that have no tasks, but only deployments defined
             # Last entry before producing the result, to allow operation on the 
             # already contrained project list
@@ -240,27 +233,6 @@ module Rock
             found.sort_by{|t|t.name}
         end
 
-        def self.find_plugins(pattern,filter = Hash.new)
-            found = []
-            filter,unkown = Kernel::filter_options(filter,[:types,:plugins])
-            return found if !unkown.empty?
-
-            Vizkit.vizkit3d_widget.plugins.each do |libname, plugin_name| 
-                if libname =~ pattern || (plugin_name && plugin_name =~ pattern)
-                    plugin = Vizkit::vizkit3d_widget.createPlugin(libname, plugin_name)
-                    if plugin_match?(plugin,pattern,filter)
-                        item_name =
-                            if plugin_name then "#{libname}/#{plugin_name}"
-                            else libname
-                            end
-
-                        found << SearchItem.new(:name => item_name, :object => plugin)
-                    end
-                end
-            end
-            found.sort_by{|t|t.name}
-        end
-
         def self.find_widgets(pattern,filter=Hash.new)
             found = []
             filter,unkown = Kernel::filter_options(filter,[:types,:widgets])
@@ -268,9 +240,7 @@ module Rock
             widgtes = Vizkit.default_loader.available_widgets
             widgtes.each do |widget|
                 if widget_match?(widget,pattern,filter)
-                    #we do not want to create an instance of the widget here
-                    #use a Qt Widget as dummy
-                    found << SearchItem.new(:name => widget, :object => Qt::Widget.new)
+                    found << SearchItem.new(:name => widget, :object => :VizkitWidget)
                 end
             end
             found.sort_by{|t|t.name}
@@ -287,17 +257,6 @@ module Rock
             return true if (project_name =~ pattern)
             return true if (filter.has_key?(:projects) && (project_name =~ filter[:projects]))
             false
-        end
-
-        def self.plugin_match?(plugin,pattern,filter = Hash.new)
-            if(filter.has_key?(:types))
-                has_type = false
-                plugin.plugins.each_value do |adapter|
-                   has_type = true if adapter.expected_ruby_type.name =~ filter[:types]
-                end
-                return false if !has_type
-            end
-            true
         end
 
         def self.type_match?(type,pattern,filter = Hash.new)
@@ -395,16 +354,7 @@ module Rock
     class WidgetView < GenericView
         def initialize(search_item)
             super
-        end
-
-        def pretty_print(pp)
-            Vizkit.default_loader.pretty_print_widget(pp,@name) 
-        end
-    end
-
-    class PluginView < GenericView
-        def initialize(search_item)
-            super
+            @object = Vizkit.default_loader.create_widget(@name)
         end
 
         def pretty_print(pp)

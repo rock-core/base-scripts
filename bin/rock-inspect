@@ -56,10 +56,7 @@ Examples:
     end
 
     if Rock::Inspect.has_vizkit?
-    opt.on('-p', '--plugins PLUGINS', 'not implemented.') do |plugin|
-        @search_filter[:plugins] = /#{plugin}/
-    end
-    opt.on('-w', '--widgets WIDGETS', 'if given, will filter out all item which are not related to WIDGTES') do |widget|
+    opt.on('-w', '--widgets WIDGETS', 'if given, will filter out all item which are not related to WIDGTES (vizkit3d plugins)') do |widget|
         @search_filter[:widgets] = /#{widget}/
     end
     end
@@ -131,17 +128,15 @@ views = result.map do |item|
         if item.object <= Typelib::Type
             Rock::TypeView.new(item) 
         else
-            raise "unexpected search result object #{item} of type #{item.class}"
+            raise "unexpected search result object #{item} of type #{item.object}"
         end
     else
         if Rock::Inspect.has_vizkit?
             case item.object
-            when Qt::Widget
+            when :VizkitWidget
                 Rock::WidgetView.new(item) 
-            when Qt::Object
-                Rock::PluginView.new(item) 
             else
-                raise "unexpected search result object #{item} of type #{item.class}"
+                raise "unexpected search result object #{item} of type #{item.object}"
             end
         end
     end
