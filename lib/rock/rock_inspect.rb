@@ -55,7 +55,7 @@ module Rock
         end
 
         def self.find(pattern,filter = Hash.new)
-            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_projects,:no_widgets,:no_plugins])
+            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_projects,:no_plugins,:no_plugins])
             result = Array.new
 
             #search for types
@@ -86,11 +86,11 @@ module Rock
                 result += Rock::Inspect::find_deployments(/#{reg}/,filter)
             end
 
-            #search for widgets
-            if !options[:no_widgets]
-                reg = filter.has_key?(:widgets) ? filter[:widgets] : pattern
+            #search for plugins
+            if !options[:no_plugins]
+                reg = filter.has_key?(:plugins) ? filter[:plugins] : pattern
                 reg = /./ unless reg
-                result += Rock::Inspect::find_widgets(/#{reg}/, filter)
+                result += Rock::Inspect::find_plugins(/#{reg}/, filter)
             end
 
             # Search for projects that have no tasks, but only deployments defined
@@ -233,14 +233,16 @@ module Rock
             found.sort_by{|t|t.name}
         end
 
-        def self.find_widgets(pattern,filter=Hash.new)
+        def self.find_plugins(pattern,filter=Hash.new)
             found = []
-            filter,unkown = Kernel::filter_options(filter,[:types,:widgets])
+            filter,unkown = Kernel::filter_options(filter,[:plugin_name,:types])
             return found if !unkown.empty?
-            widgtes = Vizkit.default_loader.available_widgets
-            widgtes.each do |widget|
-                if widget_match?(widget,pattern,filter)
-                    found << SearchItem.new(:name => widget, :object => :VizkitWidget)
+            specs = Vizkit.default_loader.plugin_specs
+            specs.each_value do |spec|
+                next if filter.has_key?(:plugin_name) && nil == (spec.plugin_name =~ filter[:plugin_name])
+                if((spec2 = spec.callback_specs.find(){|callback|callback.argument =~ pattern}) || spec.plugin_name =~ pattern)
+                    next if filter.has_key?(:types) && (!spec2 ||nil == (spec2.argument =~ filter[:types]))
+                    found << SearchItem.new(:name => spec.plugin_name, :object => spec)
                 end
             end
             found.sort_by{|t|t.name}
@@ -260,18 +262,6 @@ module Rock
         end
 
         def self.type_match?(type,pattern,filter = Hash.new)
-            true
-        end
-
-        def self.widget_match?(widget,pattern,filter = Hash.new)
-            return false unless widget =~ pattern
-            if filter.has_key?(:types)
-                has_type = false
-                Vizkit.default_loader.registered_for(widget).each do |type|
-                    has_type = true if(type =~ filter[:types])
-                end
-                return false if !has_type
-            end
             true
         end
 
@@ -354,7 +344,6 @@ module Rock
     class WidgetView < GenericView
         def initialize(search_item)
             super
-            @object = Vizkit.default_loader.create_widget(@name)
         end
 
         def pretty_print(pp)

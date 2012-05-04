@@ -6,7 +6,6 @@ require 'rock/rock_inspect'
 search_for = []
 @search_filter = Hash.new
 if !Rock::Inspect.has_vizkit?
-    @search_filter[:no_widgets] = true
     @search_filter[:no_plugins] = true
 end
 
@@ -15,7 +14,7 @@ def disable_all
     @search_filter[:no_tasks] = true
     @search_filter[:no_deployments] = true
     @search_filter[:no_types] = true
-    @search_filter[:no_widgets] = true
+    @search_filter[:no_idgets] = true
     @search_filter[:no_plugins] = true
     @search_filter[:no_projects] = true
 end
@@ -26,7 +25,7 @@ parser = OptionParser.new do |opt|
 usage: rock-inspect <search term>
 
  Searches for <search term> in installed oroGen projects,
- vizkit widgets and plugins and displays the definition of 
+ vizkit plugins and displays the definition of 
  the matching objects.
 
 Examples:
@@ -56,8 +55,8 @@ Examples:
     end
 
     if Rock::Inspect.has_vizkit?
-    opt.on('-w', '--widgets WIDGETS', 'if given, will filter out all item which are not related to WIDGTES (vizkit3d plugins)') do |widget|
-        @search_filter[:widgets] = /#{widget}/
+    opt.on('-p', '--plugins PLUGINS', 'if given, will filter out all item which are not related to plugins)') do |plugin|
+        @search_filter[:plugin_name] = /#{plugin}/
     end
     end
 
@@ -83,9 +82,9 @@ Examples:
     end
 
     if Rock::Inspect.has_vizkit?
-    opt.on('--show-widgets','if given, will only display widgtes. Can be combined with other show options.') do
-        disable_all unless @search_filter.has_key? :no_widgets
-        @search_filter.delete :no_widgets
+    opt.on('--show-plugins','if given, will only display widgtes. Can be combined with other show options.') do
+        disable_all unless @search_filter.has_key? :no_plugins
+        @search_filter.delete :no_plugins
     end
     opt.on('--show-plugins','if given, will only display plugins. Can be combined with other show options.') do
         disable_all unless @search_filter.has_key? :no_plugins
@@ -133,7 +132,7 @@ views = result.map do |item|
     else
         if Rock::Inspect.has_vizkit?
             case item.object
-            when :VizkitWidget
+            when Vizkit::PluginSpec
                 Rock::WidgetView.new(item) 
             else
                 raise "unexpected search result object #{item} of type #{item.object}"
@@ -149,7 +148,7 @@ if result.empty?
     STDERR.puts " filter tasks = #{@search_filter[:tasks]}" if @search_filter.has_key?(:tasks)
     STDERR.puts " filter ports = #{@search_filter[:ports]}" if @search_filter.has_key?(:ports)
     STDERR.puts " filter types = #{@search_filter[:types]}" if @search_filter.has_key?(:types)
-    STDERR.puts " filter widgets = #{@search_filter[:widgets]}" if @search_filter.has_key?(:widgets)
+    STDERR.puts " filter plugins = #{@search_filter[:plugin_name]}" if @search_filter.has_key?(:plugin_name)
     STDERR.puts " filter projects = #{@search_filter[:projects]}" if @search_filter.has_key?(:projects)
 end
 
