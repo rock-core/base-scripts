@@ -424,7 +424,7 @@ module Rock
         end
 
         def self.public_logs=(value)
-            Roby.app.public_logs = false
+            Roby.app.public_logs = value
         end
 
         # Unlike in Roby, all logs are public by default except in rock-roby
