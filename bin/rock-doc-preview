@@ -49,6 +49,10 @@ class WebsitePreview
         source_directory = Pathname.new(self.source_directory)
         Find.find(source_directory) do |source_path|
             relative_path = Pathname.new(source_path).relative_path_from(source_directory)
+            if %w{default.template base.template}.include?(relative_path.to_s)
+                WebsitePreview.warn "the previewed directory contains a toplevel #{relative_path} file. It is ignored and replaced by the default from Rock's documentation."
+                next
+            end
             target_path = File.join(target_dir, 'src', relative_path)
             WebsitePreview.debug "source_path=#{source_path} target_path=#{target_path}"
 
@@ -59,7 +63,7 @@ class WebsitePreview
                 end
                 WebsitePreview.debug "copied #{source_path} in #{target_path}"
                 File.open(target_path, 'w') { |io| io.write(source_data) }
-            elsif File.directory?(target_path)
+            elsif File.directory?(source_path)
                 WebsitePreview.debug "created #{target_path} for #{source_path}"
                 FileUtils.mkdir_p(target_path)
             end
@@ -83,6 +87,9 @@ end
 
 do_delete = false
 options_parser = OptionParser.new do |opt|
+    opt.on('--debug', 'delete the current cached version of the website') do
+        WebsitePreview.logger.level = Logger::DEBUG
+    end
     opt.on('--delete', 'delete the current cached version of the website') do
         do_delete = true
     end

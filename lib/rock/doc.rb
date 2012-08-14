@@ -295,16 +295,17 @@ module Rock
             end
 
             class VCSRenderingContext < RenderingContext
-                def vcs; object end
-
                 def initialize(object)
                     super(object, 'autoproj_vcs_fragment.page')
                 end
 
+                attr_reader :vcs
+
                 def render(*template_path)
-                    if vcs.raw
+                    if object.raw
                         first = true
-                        raw_info = vcs.raw.map do |pkg_set, vcs_info|
+                        raw_info = object.raw.map do |pkg_set, vcs_info|
+                            @vcs = vcs_info
                             fragment = super
                             if !first
                                 fragment = "<span class=\"vcs_override\">overriden in #{pkg_set}</span>" + fragment
@@ -315,7 +316,7 @@ module Rock
                         raw_vcs = "<div class=\"vcs\">Rock short definition<span class=\"toggle\">show/hide</span><div class=\"vcs_info\">#{raw_info.join("\n")}</div></div>"
                     end
 
-                    vcs_info = self.vcs
+                    @vcs = object
                     raw_vcs +
     "<div class=\"vcs\">Autoproj definition<span class=\"toggle\">show/hide</span><div class=\"vcs_info\">#{super}</div></div>"
                 end

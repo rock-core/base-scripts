@@ -2,6 +2,7 @@ require 'roby/app'
 require 'utilrb/logger'
 require 'pathname'
 require 'yaml'
+require 'orocos'
 
 module Rock
     # Bundle support
@@ -286,6 +287,7 @@ module Rock
             end
 
             Roby.app.app_dir = current_bundle.path
+            Roby.app.load_config_yaml
             Roby.app.search_path = selected_bundles.map(&:path)
             selected_bundles.each do |b|
                 libdir = File.join(b.path, "lib")
@@ -305,6 +307,12 @@ module Rock
             FileUtils.mkdir_p Bundles.log_dir
             Orocos.default_working_directory = Bundles.log_dir
             ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
+
+            # Load configuration directories
+            find_dirs('models', 'orogen', :order => :specific_last, :all => true).each do |dir|
+                Orocos.register_orogen_files(dir)
+            end
+
             Orocos.load
 
             # Load configuration directories
@@ -343,8 +351,17 @@ module Rock
                 else Hash.new
                 end
 
-            output_options, options = Kernel.filter_options options,
-                :output => "%m-%p.txt"
+            cmdline_options = [:gdb, :gdb_options, :valgrind, :valgrind_options, :wait]
+            cmdline_wrappers, options = Kernel.filter_options options, cmdline_options
+            cmdline_options.each do |key|
+                if value = Scripts.send(key)
+                    cmdline_wrappers[key] = value
+                end
+            end
+
+            output_options, options = Kernel.filter_options options, :output => "%m-%p.txt"
+
+            options = options.merge(cmdline_wrappers)
             options = options.merge(output_options)
 
             args.push(options)
@@ -368,6 +385,10 @@ module Rock
 
         # Initializes the bundle support, and initializes the orocos layer
         def self.initialize
+            if Orocos.initialized?
+                raise ArgumentError, "Orocos.initialize has already been called. Do not call Orocos.initialize and Bundles.initialize multiple times"
+            end
+
             self.load
             Roby.app.setup_dirs
             if Bundles.public_logs?
@@ -383,6 +404,38 @@ module Rock
             task = Orocos::TaskContext.get(task_name)
             Orocos.conf.apply(task, ['default'])
             task
+        end
+
+        def self.parse_script_options(argv)
+            parser = OptionParser.new do |opt|
+                opt.on('--gdb[=TASKS]', String, 'run the comma-separated list of deployments using gdbserver. Do all if no arguments are given.') do |gdb|
+                    Bundles::Scripts.gdb = gdb.split(',')
+                end
+                opt.on('--gdb-options=OPTIONS', String, 'comma-separated list of options that should be passed to the started gdbserver') do |gdb_options|
+                    Bundles::Scripts.gdb_options = gdb_options.split(',')
+                end
+                opt.on('--gdb-port=PORT', Integer, 'base port that should be used for gdbserver') do |gdb_port|
+                    Orocos::Process.gdb_base_port = gdb_port
+                end
+                opt.on('--valgrind[=TASKS]', String, 'run the comma-separated list of deployments using valgrind. Do all if no arguments are given.') do |valgrind|
+                    Bundles::Scripts.valgrind = valgrind.split(',')
+                end
+                opt.on('--valgrind-options=OPTIONS', String, 'comma-separated list of options that should be passed to the started valgrind') do |valgrind_options|
+                    Bundles::Scripts.valgrind_options = valgrind_options.split(',')
+                end
+                opt.on('--wait=SECONDS', Integer, 'wait that many seconds before deciding that a process will not start') do |wait|
+                    Bundles::Scripts.wait = wait
+                end
+                opt.on("-h", "--help", "this help message") do
+                    puts opt
+                    exit 0
+                end
+
+                if block_given?
+                    yield(opt)
+                end
+            end
+            parser.parse(argv)
         end
 
         def self.change_default_options(args, defaults)
@@ -434,6 +487,17 @@ module Rock
             attr_reader :log_dir_created
         end
         @log_dir_created = []
+
+        module Scripts
+            class << self
+                attr_accessor :gdb
+                attr_accessor :gdb_options
+                attr_accessor :gdb_port
+                attr_accessor :valgrind
+                attr_accessor :valgrind_options
+                attr_accessor :wait
+            end
+        end
     end
 end
 
