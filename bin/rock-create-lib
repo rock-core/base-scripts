@@ -3,6 +3,12 @@
 set -e
 
 path=$1
+
+if [ "$path" == "--help" ] || [ "$path" == "-h" ]; then
+    echo "usage: rock-create-lib dirname"
+    exit 1
+fi
+
 if test -z "$path"; then
     echo "usage: rock-create-lib dirname"
     exit 1
