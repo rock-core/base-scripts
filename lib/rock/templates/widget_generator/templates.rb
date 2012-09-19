@@ -239,7 +239,7 @@ Vizkit::UiLoader::extend_cplusplus_widget_class "<%= @widget_klassname %>" do
     #called when the widget is created
     def initialize_vizkit_extension
         #activate Typelib transport via qt slots
-        extend QtTypelibExtension
+        extend Vizkit::QtTypelibExtension
     end
 
     #called each time vizkit wants to display a new 
