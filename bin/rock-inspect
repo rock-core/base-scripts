@@ -55,9 +55,9 @@ Examples:
     end
 
     if Rock::Inspect.has_vizkit?
-    opt.on('-p', '--plugins PLUGINS', 'if given, will filter out all item which are not related to plugins)') do |plugin|
-        @search_filter[:plugin_name] = /#{plugin}/
-    end
+        opt.on('-p', '--plugins PLUGINS', 'if given, will filter out all item which are not related to plugins)') do |plugin|
+            @search_filter[:plugin_name] = /#{plugin}/
+        end
     end
 
     opt.on('--show-types','if given, will only display types. Can be combined with other show options.') do
@@ -133,7 +133,7 @@ views = result.map do |item|
         if Rock::Inspect.has_vizkit?
             case item.object
             when Vizkit::PluginSpec
-                Rock::WidgetView.new(item) 
+                Rock::WidgetView.new(item)
             else
                 raise "unexpected search result object #{item} of type #{item.object}"
             end
