@@ -323,7 +323,8 @@ module Rock
             # Check if the transformer is available. It if is, set it up
             begin
                 require 'transformer/runtime'
-                if conf_file = find_file('config', 'transforms.rb', :order => :specific_first)
+                @transformer_config ||= "transforms.rb"
+                if conf_file = find_file('config', @transformer_config, :order => :specific_first)
                     Transformer.use_bundle_loader
                     Orocos.transformer.load_conf(conf_file)
                 end
@@ -333,6 +334,11 @@ module Rock
 
         def self.has_transformer?
             Orocos.respond_to?(:transformer)
+        end
+
+        def self.set_transformer_config(file_name)
+            # sets the name of the transformer file found in the config folder
+            @transformer_config = file_name
         end
 
         def self.method_missing(m, *args, &block)
