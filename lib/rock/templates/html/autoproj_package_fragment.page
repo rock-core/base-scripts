@@ -7,7 +7,7 @@
             map { |s| Rock::Doc::HTML.obscure_email(s) }.
             join(", ")
         license = REXML::XPath.each(pkg.description.xml, "//license").map(&:text).join(", ")
-        urls = REXML::XPath.each(pkg.description.xml, "//url").map(&:to_s).
+        urls = REXML::XPath.each(pkg.description.xml, "//url").map(&:text).
             map { |s| "<a href=\"#{s}\">#{s}</a>" }.
             join(" ")
     end
