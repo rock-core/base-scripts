@@ -336,7 +336,7 @@ module Rock
             Orocos.respond_to?(:transformer)
         end
 
-        def self.set_transformer_config(file_name)
+        def self.transformer_config=(file_name)
             # sets the name of the transformer file found in the config folder
             @transformer_config = file_name
         end
