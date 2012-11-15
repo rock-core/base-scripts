@@ -22,7 +22,7 @@
     set_packages = set_packages.map do |pkg|
         link_to(Autoproj.manifest.package(pkg.name))
     end
-    osdeps = pkg_set.each_osdep.map(&:first).sort.map do |name|
+    osdeps = pkg_set.each_osdep.sort.map do |name|
         link_to(OSPackage.new(name))
     end
     %>
