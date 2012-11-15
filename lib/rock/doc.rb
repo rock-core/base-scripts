@@ -60,7 +60,10 @@ module Rock
                 binding = path.pop
                 path = template_path(*path)
 		template = load_template(path)
-                template.result(binding)
+                begin template.result(binding)
+                rescue Exception => e
+                    raise e, "failed to render #{File.join(*path)}: #{e.message}", e.backtrace
+                end
             end
 
             def self.render_page(body)
