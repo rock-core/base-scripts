@@ -10,7 +10,7 @@ class Gitorious
     end
 
     def http_uri
-        "http://#{hostname}/"
+        "http://#{hostname}"
     end
 
     #returns all projects which are hosted at @http_uri
@@ -38,7 +38,7 @@ class Gitorious
     #returns all gits which are hosted at @http_uri/project
     def gits(project)
         array = Array.new
-        body = raw_file(http_uri+project)
+        body = raw_file(http_uri+"/"+project)
         body.scan(/<h3 mainline>.*\n.*<a href="(.*)">(.*)<\/a>/) do |path,name|
             array << NamePath.new(name,path)
         end
