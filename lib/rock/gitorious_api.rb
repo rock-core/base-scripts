@@ -20,14 +20,16 @@ class Gitorious
         new_data = true
         while(new_data)
             new_data = false
-            body = raw_file(http_uri+"/projects?page=#{i}")
+            body = nil
+            if(filter)
+                body = raw_file(http_uri+"/search?page=#{i}&q=#{filter}")
+            else
+                body = raw_file(http_uri+"/projects?page=#{i}")                
+            end
             reg = Regexp.new(filter) if filter
-            body.scan(/<h3><a href="(.*)">(.*)<\/a><\/h3>/) do |path,name|
-                if reg
-                    array << NamePath.new(name,path) if name.match(reg)
-                else
-                    array << NamePath.new(name,path)
-                end
+            body.scan(/<h3><a href="(.*)">(.*)<\/a>/) do |path,name|
+                puts "Found project with name #{name}"
+                array << NamePath.new(name,path)
                 new_data = true
             end
             i = i + 1
