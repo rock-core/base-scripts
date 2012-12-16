@@ -121,7 +121,7 @@ views = result.map do |item|
         Rock::TaskView.new(item)
     when Orocos::Spec::Port
         Rock::PortView.new(item) 
-    when Orocos::Generation::Deployment
+    when Orocos::Spec::Deployment
         Rock::DeploymentView.new(item) 
     when Class
         if item.object <= Typelib::Type
