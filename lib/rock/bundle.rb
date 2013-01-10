@@ -1,4 +1,4 @@
-require 'roby/app'
+require 'roby'
 require 'utilrb/logger'
 require 'pathname'
 require 'yaml'
