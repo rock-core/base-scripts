@@ -391,7 +391,11 @@ end
 
 
 begin
-    require 'vizkit'
+    if ENV['DISPLAY']
+        require 'vizkit'
+    else
+        Rock::Inspect.has_vizkit = false
+    end
 rescue LoadError
     Rock::Inspect.has_vizkit = false
 end
