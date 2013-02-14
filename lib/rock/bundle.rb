@@ -242,8 +242,7 @@ module Rock
             result
         end
 
-        # Initializes the bundle support, and load all the available orocos info
-        def self.load(required = false)
+        def self.setup_search_paths(required = false)
             current_bundle =
                 begin
                     self.current_bundle
@@ -295,6 +294,11 @@ module Rock
                     $LOAD_PATH.unshift libdir
                 end
             end
+        end
+
+        # Initializes the bundle support, and load all the available orocos info
+        def self.load(required = false)
+            setup_search_paths
 
             require 'orocos'
 
