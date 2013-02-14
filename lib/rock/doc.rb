@@ -116,6 +116,8 @@ module Rock
                 end
 
                 context.render(*template_path)
+            rescue Exception => e
+                raise e, "failed to render object #{object}: #{e.message}", e.backtrace
             end
 
             # Base class for rendering contexts
