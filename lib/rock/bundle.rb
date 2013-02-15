@@ -1,5 +1,6 @@
 require 'roby'
 require 'utilrb/logger'
+require 'utilrb/pathname/find_matching_parent'
 require 'pathname'
 require 'yaml'
 require 'orocos'
@@ -117,12 +118,10 @@ module Rock
         # Returns nil if there is none
         def self.find_bundle_from_dir(dir)
             # Look for a bundle in the parents of Dir.pwd
-            curdir = Pathname.new(dir)
-            while !curdir.root? && !is_bundle_path?(curdir.to_s)
-                curdir = curdir.parent
-            end
-            if !curdir.root?
-                return Bundle.new(curdir.to_s)
+            bundle_dir = Pathname.new(dir).
+                find_matching_parent { |curdir| is_bundle_path?(curdir.to_s) }
+            if bundle_dir
+                return Bundle.new(bundle_dir.to_s)
             end
         end
 
