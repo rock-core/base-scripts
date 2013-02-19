@@ -286,7 +286,8 @@ module Rock
 
             Roby.app.app_dir = current_bundle.path
             Roby.app.load_config_yaml
-            Roby.app.search_path = selected_bundles.map(&:path)
+            rock_bundle_path = (ENV['ROCK_BUNDLE_PATH'] || "").split(":")
+            Roby.app.search_path = selected_bundles.map(&:path) + rock_bundle_path
             selected_bundles.each do |b|
                 libdir = File.join(b.path, "lib")
                 if File.directory?(libdir)
