@@ -1,9 +1,21 @@
 #! /bin/sh
 
+set -e
 name=$1
 if test -z "$name"; then
-    echo "usage: rock-create-orogen dirname"
-    exit 1
+    if test -f manifest.xml; then
+        # We assume that we are in an oroGen package already and should finalize
+        # the creation
+        orogen *.orogen
+        orogen --clean
+        git init
+        git add .
+        git commit -m 'initial commit by rock-create-orogen'
+        exit 0
+    else
+        echo "usage: rock-create-orogen dirname"
+        exit 1
+    fi
 fi
 if test -e "$name"; then
     echo "$name already exists"
@@ -27,6 +39,7 @@ if test -z "$ROCK_TEMPLATE_PREFIX"; then
     ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock-base/template_
     ROCK_TEMPLATE_SUFFIX=.git
     wget --timeout=5 http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/manifest.xml
+    wget --timeout=5 http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/config_manifest.sh
 
     if [ $? != 0 ]; then
 	echo
@@ -36,12 +49,7 @@ if test -z "$ROCK_TEMPLATE_PREFIX"; then
 	exit 2
     fi
 
-    echo
-    echo "Please fill out $name/manifest.xml "
-    echo
-    echo "This is needed for autoproj to keep track of the dependencies and"
-    echo "to tell other people what the orogen package is about."
-    echo
+    sh ./config_manifest.sh
 
 else
     CMAKE_LIB_DIR=`echo "${ROCK_TEMPLATE_PREFIX}/cmake_lib" | sed 's/\/\//\//g'`
@@ -57,3 +65,15 @@ else
     sh $CMAKE_LIB_DIR/config_manifest.sh
 fi
 
+echo
+echo "oroGen package template successfully created. You should now cd in the"
+echo "$name/ folder and edit the $name.orogen file to describe your types"
+echo "and components."
+echo "Then, re-run rock-create-orogen without arguments to finalize the package"
+echo "creation. If the command fails, you should fix the reported problem(s) and"
+echo "run rock-create-orogen again until it passes."
+echo
+echo "Once there are no errors left, run then"
+echo "  amake"
+echo "to build and install the package"
+echo
