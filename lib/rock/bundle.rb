@@ -414,8 +414,10 @@ module Rock
         # configuration is done on this task, in particular the 'default'
         # configuration is applied if one is defined for the task's model
         def self.get(task_name)
-            task = Orocos::TaskContext.get(task_name)
-            Orocos.conf.apply(task, ['default'])
+            task = Orocos.name_service.get(task_name)
+	    if !task.kind_of?(Orocos::Log::TaskContext)
+                Orocos.conf.apply(task, ['default'])
+	    end
             task
         end
 
