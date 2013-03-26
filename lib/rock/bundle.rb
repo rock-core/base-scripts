@@ -396,7 +396,7 @@ module Rock
         # Initializes the bundle support, and initializes the orocos layer
         def self.initialize
             # All logs are public by default in bundle scripts. This is overriden in rock-roby
-            Roby.app.public_logs = true
+            Roby.app.public_logs = Bundles.public_logs?
 
             if Orocos.initialized?
                 raise ArgumentError, "Orocos.initialize has already been called. Do not call Orocos.initialize and Bundles.initialize multiple times"
@@ -488,12 +488,14 @@ module Rock
         # If true, the logs are going to be kept. Otherwise, the log folder is
         # going to be deleted on shutdown
         def self.public_logs?
-            Roby.app.public_logs?
+            @public_logs
         end
 
         def self.public_logs=(value)
-            Roby.app.public_logs = value
+            @public_logs = value
         end
+
+        self.public_logs = true
 
         class << self
             attr_reader :log_dir_created
