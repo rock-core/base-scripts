@@ -6,7 +6,10 @@ require 'qtwebkit'
 require 'autoproj'
 require 'orocos'
 Orocos.load
-Autoproj::CmdLine.initialize_and_load
+Autoproj.silent do
+    Autoproj::CmdLine.initialize_and_load
+end
+
 app = Qt::Application.new(ARGV)
 
 main = Qt::Widget.new
