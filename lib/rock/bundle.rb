@@ -260,7 +260,7 @@ module Rock
                 selected_bundles = [current_bundle]
             end
 
-            selected_bundles.each do |b|
+            selected_bundles.reverse.each do |b|
                 $LOAD_PATH.unshift(b.path) unless $LOAD_PATH.include?(b.path)
             end
 
@@ -288,7 +288,7 @@ module Rock
             Roby.app.load_config_yaml
             rock_bundle_path = (ENV['ROCK_BUNDLE_PATH'] || "").split(":")
             Roby.app.search_path = selected_bundles.map(&:path) + rock_bundle_path
-            selected_bundles.each do |b|
+            selected_bundles.reverse.each do |b|
                 libdir = File.join(b.path, "lib")
                 if File.directory?(libdir)
                     $LOAD_PATH.unshift libdir
