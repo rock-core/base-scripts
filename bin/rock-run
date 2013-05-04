@@ -23,28 +23,54 @@ if filename
     end
 end
 
+do_start = false
+
+parser = OptionParser.new
+Orocos::Scripts.common_optparse_setup(parser)
+parser.banner = "rock-run [--gui] task_model task_name"
+parser.on '--start', 'starts the task' do
+    do_start = true
+end
+
+model, name = parser.parse(ARGV)
+
 require 'orocos'
+if Orocos::Scripts.gui?
+    require 'vizkit'
+end
 require 'orocos/scripts'
 
 Orocos.initialize
 
-parser = OptionParser.new
-Orocos::Scripts.common_optparse_setup(parser)
-model, name = parser.parse(ARGV)
-name  ||= "rock-run#{Process.pid}"
+if !name
+    name = model.gsub(/::.*/, '')
+    if Orocos.name_service.task_reachable?(name)
+        name = "#{name}%i"
+        100.times do |i|
+            candidate = name % [i]
+            if !Orocos.name_service.task_reachable?(candidate)
+                name = candidate
+                break
+            end
+        end
+    end
+end
 
 Orocos.run model => name do
     task = Orocos::TaskContext.get(name)
     Orocos::Scripts.conf(task)
 
     if Orocos::Scripts.gui?
-        require 'vizkit'
-        Vizkit.display(task)
+        task = task.to_proxy
+        Vizkit.display task
+    end
 
-        #if task.rtt_state == :PRE_OPERATIONAL
-        #    task.configure
-        #end
-        #task.start
+    if do_start
+        task.configure if task.rtt_state == :PRE_OPERATIONAL
+        task.start
+    end
+
+    if Orocos::Scripts.gui?
         Vizkit.exec
     else
         STDIN.readline
