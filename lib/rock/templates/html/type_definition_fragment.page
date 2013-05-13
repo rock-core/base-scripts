@@ -1,5 +1,9 @@
 <% if type < Typelib::OpaqueType %>
 Unknown to oroGen (this is an opaque type)
+<% elsif type < Typelib::NumericType %>
+<ul class="body-header-list">
+<%= render_item(type.name) %>
+</ul>
 <% elsif type < Typelib::CompoundType %>
 <ul class="body-header-list">
     <% type.each_field do |field_name, field_type| %>
