@@ -217,6 +217,14 @@ module Rock
             end
         end
 
+        # Returns true if we have a selected bundle
+        def self.has_selected_bundle?
+            current_bundle
+            true
+        rescue NoBundle
+            false
+        end
+
         # Returns an array containing both +root_bundle+ and its dependencies
         # (recursively). The array is returned in order of priority.
         def self.discover_dependencies(root_bundle)
