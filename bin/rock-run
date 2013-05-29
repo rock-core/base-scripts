@@ -73,7 +73,7 @@ Orocos.run model => name do
     if Orocos::Scripts.gui?
         Vizkit.exec
     else
-        STDIN.readline
+        Orocos.watch(task)
     end
 end
 
