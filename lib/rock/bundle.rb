@@ -423,7 +423,7 @@ module Rock
         # configuration is applied if one is defined for the task's model
         def self.get(task_name)
             task = Orocos.name_service.get(task_name)
-	    if !task.kind_of?(Orocos::Log::TaskContext)
+	    if !defined?(Orocos::Log::TaskContext) || !task.kind_of?(Orocos::Log::TaskContext)
                 Orocos.conf.apply(task, ['default'])
 	    end
             task
