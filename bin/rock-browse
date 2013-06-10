@@ -5,6 +5,9 @@ require 'rock/doc'
 require 'qtwebkit'
 require 'autoproj'
 require 'orocos'
+require 'metaruby/gui'
+require 'orogen/html'
+
 Orocos.load
 Autoproj.silent do
     Autoproj::CmdLine.initialize_and_load
@@ -128,8 +131,14 @@ end
 
 view = ModelListWidget.new(splitter)
 text = Qt::WebView.new(splitter)
+page = MetaRuby::GUI::HTML::Page.new(text)
 splitter.add_widget(view)
 splitter.add_widget(text)
+
+displays = [
+    Orocos::HTML::TaskContext.new(page),
+    Orocos::HTML::Type.new(page)
+]
 
 reload.connect(SIGNAL('clicked()')) do
     view.reload
@@ -143,12 +152,13 @@ view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
                end
         name = item.text(0)
 
+        page.clear
         if role == ModelListWidget::ROLE_OROGEN_TYPE
             Orocos.load_typekit_for(name, false)
-            fragment = Rock::Doc::HTML.render_object(Orocos.registry.get(name), 'type_fragment.page')
+            displays[1].render(Orocos.registry.get(name))
         elsif role == ModelListWidget::ROLE_OROGEN_TASK
             model = Orocos.task_model_from_name(name)
-            fragment = Rock::Doc::HTML.render_object(model, 'orogen_task_fragment.page')
+            displays[0].render(model)
         elsif role == ModelListWidget::ROLE_INSTALLED_PACKAGE || role == ModelListWidget::ROLE_AVAILABLE_PACKAGE
             package = Autoproj.manifest.packages[name]
             fragment = Rock::Doc::HTML.render_object(package, 'autoproj_package_fragment.page')
