@@ -4,5 +4,6 @@
   <author>Sylvain Joyeux/sylvain.joyeux@dfki.de</author>
   <license>GPLv2 or later</license>
   <depend package="tools/roby" optional="1" />
+  <depend package="kramdown" />
 
 </package>

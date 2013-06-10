@@ -1,4 +1,5 @@
 require 'erb'
+require 'kramdown'
 module Rock
     module Doc
         OSPackage = Struct.new :name

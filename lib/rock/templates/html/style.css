@@ -47,4 +47,17 @@ table.short_doc {
 table.short_doc td.short_doc {
     font-style: italic;
 }
+.type-doc, .field-doc {
+padding-left: 1px;
+padding-top: 0;
+padding-bottom: 0;
+background:#e4e4ff;
+color:#222;
+border:2px solid #ddd;
+margin-top: .1em;
+margin-bottom: .1em;
+margin-left: 1em;
+margin-right: .1em;
+font-size: 80%;
+}
 

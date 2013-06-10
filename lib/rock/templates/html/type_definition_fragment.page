@@ -1,3 +1,8 @@
+<% if doc = type.metadata.get('doc').first %>
+<div class="type-doc">
+<%= Kramdown::Document.new(doc).to_html %>
+</div>
+<% end %>
 <% if type < Typelib::OpaqueType %>
 Unknown to oroGen (this is an opaque type)
 <% elsif type < Typelib::NumericType %>
@@ -7,6 +12,11 @@ Unknown to oroGen (this is an opaque type)
 <% elsif type < Typelib::CompoundType %>
 <ul class="body-header-list">
     <% type.each_field do |field_name, field_type| %>
+        <% if doc = type.field_metadata[field_name].get('doc').first %>
+        <div class="field-doc">
+        <%= Kramdown::Document.new(doc).to_html %>
+        </div>
+        <% end %>
         <%= render_item(field_name, link_to(field_type)) %>
     <% end %>
 </ul>
