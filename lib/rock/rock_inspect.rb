@@ -182,17 +182,15 @@ module Rock
             found = []
             filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deployments])
             return found if !unkown.empty?
-            Orocos.available_deployments.each do |name, pkg|
-                project_name = pkg.project_name
-                if name =~ pattern || project_name =~ pattern
-                    if tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
-                        if deployer = tasklib.deployers.find {|n| n.name == name}
-                            if deployment_match?(deployer,pattern,filter)
-                                found << SearchItem.new(:name => "Deployment::#{deployer.name}",
-                                                        :project_name => project_name,
-                                                            :object => deployer)
-                            end
-                        end
+            Orocos.available_projects.each_key do |project_name|
+                tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
+                tasklib.deployers.each do |deployer|
+                    if pattern === deployer.name || pattern === tasklib.name ||
+                        deployer.task_activities.find { |t| pattern === t.name || pattern === t.task_model.name }
+                        found << SearchItem.new(:name => "Deployment::#{deployer.name}",
+                                                :project_name => project_name,
+                                                :object => deployer)
+
                     end
                 end
             end
