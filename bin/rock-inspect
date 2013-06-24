@@ -14,7 +14,7 @@ def disable_all
     @search_filter[:no_tasks] = true
     @search_filter[:no_deployments] = true
     @search_filter[:no_types] = true
-    @search_filter[:no_idgets] = true
+    @search_filter[:no_widgets] = true
     @search_filter[:no_plugins] = true
     @search_filter[:no_projects] = true
 end

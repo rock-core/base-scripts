@@ -55,7 +55,7 @@ module Rock
         end
 
         def self.find(pattern,filter = Hash.new)
-            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_projects,:no_plugins,:no_plugins])
+            options, filter = Kernel::filter_options(filter,[:no_types,:no_ports,:no_tasks,:no_deployments,:no_projects,:no_plugins,:no_plugins,:no_widgets])
             result = Array.new
 
             #search for types
