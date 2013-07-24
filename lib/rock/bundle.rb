@@ -402,7 +402,7 @@ module Rock
         end
 
         # Initializes the bundle support, and initializes the orocos layer
-        def self.initialize
+        def self.initialize(*args)
             # All logs are public by default in bundle scripts. This is overriden in rock-roby
             Roby.app.public_logs = Bundles.public_logs?
 
@@ -415,7 +415,7 @@ module Rock
             if Bundles.public_logs?
                 Bundles.info "log files are going in #{Bundles.log_dir}"
             end
-            Orocos.initialize
+            Orocos.initialize(*args)
         end
 
         # Returns the task context referred to by +name+. Some common
