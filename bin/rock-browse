@@ -131,7 +131,7 @@ end
 
 view = ModelListWidget.new(splitter)
 text = Qt::WebView.new(splitter)
-page = MetaRuby::GUI::HTML::Page.new(text)
+page = MetaRuby::GUI::HTML::Page.new(text.page)
 splitter.add_widget(view)
 splitter.add_widget(text)
 
