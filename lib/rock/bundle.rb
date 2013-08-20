@@ -304,6 +304,22 @@ module Rock
             end
         end
 
+        # The full path to the configuration directory
+        #
+        # This returns the full path to the directory that contains the
+        # configuration files, given the current bundle setup. It creates this
+        # directory if it does not exist
+        #
+        # @return [String] the path to the directory. It is guaranteed to exist.
+        # @raise (see current_bundle)
+        def self.config_dir
+            dir = File.join(current_bundle.path, 'config')
+            if !File.directory?(dir)
+                FileUtils.mkdir_p dir
+            end
+            dir
+        end
+
         # Initializes the bundle support, and load all the available orocos info
         def self.load(required = false)
             setup_search_paths
