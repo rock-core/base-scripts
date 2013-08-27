@@ -1,6 +1,5 @@
 #! /bin/sh
 
-set -e
 name=$1
 if test -z "$name"; then
     if test -f manifest.xml; then
