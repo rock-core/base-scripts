@@ -1,12 +1,13 @@
 #! /usr/bin/env ruby
 require 'Qt'
 
-require 'rock/doc'
+require 'metaruby/gui'
+require 'orogen/html'
+require 'rock/html'
+
 require 'qtwebkit'
 require 'autoproj'
 require 'orocos'
-require 'metaruby/gui'
-require 'orogen/html'
 
 Orocos.load
 Autoproj.silent do
@@ -137,7 +138,10 @@ splitter.add_widget(text)
 
 displays = [
     Orocos::HTML::TaskContext.new(page),
-    Orocos::HTML::Type.new(page)
+    Orocos::HTML::Type.new(page),
+    Rock::HTML::AutoprojPackage.new(page),
+    Rock::HTML::AutoprojPackageSet.new(page),
+    Rock::HTML::AutoprojOSDep.new(page),
 ]
 
 reload.connect(SIGNAL('clicked()')) do
@@ -161,17 +165,13 @@ view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
             displays[0].render(model)
         elsif role == ModelListWidget::ROLE_INSTALLED_PACKAGE || role == ModelListWidget::ROLE_AVAILABLE_PACKAGE
             package = Autoproj.manifest.packages[name]
-            fragment = Rock::Doc::HTML.render_object(package, 'autoproj_package_fragment.page')
+            displays[2].render(package)
         elsif role == ModelListWidget::ROLE_PACKAGE_SET
             package = Autoproj.manifest.each_package_set.find { |pkg_set| pkg_set.name == name }
-            fragment = Rock::Doc::HTML.render_object(package, 'autoproj_package_set_fragment.page')
+            displays[3].render(package)
         elsif role == ModelListWidget::ROLE_OSDEPS
-            osdep = Rock::Doc::OSPackage.new(name)
-            fragment = Rock::Doc::HTML.render_object(osdep, 'autoproj_osdeps_fragment.page')
-        end
-
-        if fragment
-            text.html = Rock::Doc::HTML.render_page(fragment)
+            osdep = Rock::HTML::OSPackage.new(name)
+            displays[4].render(osdep)
         end
     end
 end
