@@ -1,0 +1,31 @@
+<h2>Package Info</h2>
+<ul class="body-header-list">
+    <%= page.render_item('name', pkg_set.name) %>
+
+<% if pkg_set.empty? %>
+    <%= page.render_item('is_empty') %>
+<% else %>
+    <%= page.render_item('imported from', render_vcs(pkg_set.vcs)) %>
+    <%
+    imports = pkg_set.each_imported_set.to_a
+    if !imports.empty?
+        imports.each do |imported_set|
+
+    %>
+    <%= page.render_item("imports", page.link_to(imported_set)) %>
+    <%
+        end
+    end
+    set_packages = pkg_set.each_package.sort_by(&:name)
+    set_packages = set_packages.map do |pkg|
+        page.link_to(Autoproj.manifest.package(pkg.name))
+    end
+    osdeps = pkg_set.each_osdep.sort.map do |name|
+        page.link_to(OSPackage.new(name))
+    end
+    %>
+    <%= page.render_item('packages', set_packages.join(", ")) %>
+    <%= page.render_item('osdeps', osdeps.join(", ")) %>
+<% end %>
+</ul>
+

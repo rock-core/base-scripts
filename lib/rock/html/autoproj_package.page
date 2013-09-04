@@ -1,0 +1,69 @@
+<%
+    pkg, pkg_set = object.autobuild, object.package_set
+    vcs_def = Autoproj.manifest.importer_definition_for(pkg.name)
+    set_vcs_def = pkg_set.vcs
+    if pkg.description
+        authors = REXML::XPath.each(pkg.description.xml, "//author").map(&:text).
+            map { |s| HTML.obscure_email(s) }.
+            join(", ")
+        license = REXML::XPath.each(pkg.description.xml, "//license").map(&:text).join(", ")
+        urls = REXML::XPath.each(pkg.description.xml, "//url").map(&:text).
+            map { |s| "<a href=\"#{s}\">#{s}</a>" }.
+            join(" ")
+    end
+
+    api_url = api_url(pkg)
+
+    all_opt_deps = pkg.optional_dependencies.to_set
+    pkg_opt_deps, ospkg_opt_deps, disabled = pkg.partition_optional_dependencies
+    pkg_deps = pkg.dependencies.
+        find_all { |dep_name| !all_opt_deps.include?(dep_name) }.
+        sort.map do |name|
+            if !(package = Autoproj.manifest.package(name))
+                raise ArgumentError, "cannot find definition for package #{name}"
+            end
+            page.link_to(package)
+        end
+    ospkg_deps = pkg.os_packages.
+        find_all { |dep_name| !all_opt_deps.include?(dep_name) }.
+        sort.map { |name| page.link_to(OSPackage.new(name)) }
+
+    pkg_opt_deps = pkg_opt_deps.
+        sort.map do |name|
+            if !(package = Autoproj.manifest.package(name))
+                raise ArgumentError, "cannot find definition for package #{name}"
+            end
+            page.link_to(package)
+        end
+    ospkg_opt_deps = ospkg_opt_deps.
+        sort.map do |name|
+            page.link_to(OSPackage.new(name))
+        end
+
+    pkg_deps, ospkg_deps, pkg_opt_deps, ospkg_opt_deps = [pkg_deps, ospkg_deps, pkg_opt_deps, ospkg_opt_deps].
+        map do |array|
+            if array.empty? then 'none'
+            else array.join(", ")
+            end
+        end
+%>
+
+<h2>Package Info</h2>
+<ul class="body-header-list">
+    <%= page.render_item('name', pkg.name) %>
+    <%= page.render_item('authors', authors || '') %>
+    <%= page.render_item('license', license || '') %>
+    <%= page.render_item('URL', urls || '') %>
+    <%= render_item("<a href=\"#{api_url}\">API Documentation</a>") if api_url %>
+    <%= page.render_item('mandatory dependencies', pkg_deps) %>
+    <%= page.render_item('optional dependencies', pkg_opt_deps) %>
+    <%= page.render_item('mandatory OS dependencies', ospkg_deps) %>
+    <%= page.render_item('optional OS dependencies', ospkg_opt_deps) %>
+</ul>
+
+<h2>Import Info</h2>
+<ul class="body-header-list">
+    <% doc = "in autoproj, a package set is used to declare packages so that they can be imported and built. To be able to build a package, one should therefore add the relevant package set to its build configuration by copy/pasting one of the following blocks (either the Rock short definition or the Autoproj definition) into the package_sets section of autoproj/manifest. See also <a href=\"/documentation/tutorials/190_installing_packages.html\">this tutorial</a>." %>
+    <%= page.render_item('defined in package set', page.link_to(pkg_set) + HTML.help_tip(doc) + render_vcs(set_vcs_def)) %>
+    <%= page.render_item('import info', render_vcs(vcs_def)) %>
+</ul>
