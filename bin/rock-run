@@ -43,37 +43,49 @@ require 'orocos/scripts'
 Orocos.initialize
 
 if !name
-    name = model.gsub(/::.*/, '')
-    if Orocos.name_service.task_reachable?(name)
-        name = "#{name}%i"
-        100.times do |i|
-            candidate = name % [i]
-            if !Orocos.name_service.task_reachable?(candidate)
-                name = candidate
-                break
+    if model =~ /::/
+        name = model.gsub(/::.*/, '')
+        if Orocos.name_service.task_reachable?(name)
+            name = "#{name}%i"
+            100.times do |i|
+                candidate = name % [i]
+                if !Orocos.name_service.task_reachable?(candidate)
+                    name = candidate
+                    break
+                end
             end
         end
+    else
+        name = '' # No prefix
     end
 end
 
-Orocos.run model => name do
-    task = Orocos::TaskContext.get(name)
-    Orocos::Scripts.conf(task)
+Orocos::Scripts.run model => name do |*processes|
+    tasks = processes.map do |p|
+        p.each_task.to_a
+    end.flatten
+
+    tasks.each do |t|
+        Orocos::Scripts.conf(t)
+    end
 
     if Orocos::Scripts.gui?
-        task = task.to_proxy
-        Vizkit.display task
+        tasks.each do |t|
+            Vizkit.display t.to_proxy
+        end
     end
 
     if do_start
-        task.configure if task.rtt_state == :PRE_OPERATIONAL
-        task.start
+        tasks.each do |t|
+            t.configure if t.rtt_state == :PRE_OPERATIONAL
+            t.start
+        end
     end
 
     if Orocos::Scripts.gui?
         Vizkit.exec
     else
-        Orocos.watch(task)
+        Orocos.watch(*tasks)
     end
 end
 
