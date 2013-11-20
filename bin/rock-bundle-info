@@ -1,7 +1,7 @@
 #! /usr/bin/env ruby
 require 'rock/bundle'
 
-Bundles.load
+Bundles.setup_search_paths
 
 puts "Available bundles:"
 Bundles.each_bundle do |b|
