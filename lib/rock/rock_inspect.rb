@@ -38,11 +38,33 @@ module Rock
 
         Inspect.debug = false
         Inspect.has_vizkit = true
-        @master_project = Orocos::Generation::Project.new
 
-        def self.load_orogen_project(master_project, name, debug)
+        def self.orogen_loader
+            if !@orogen_loader
+                loader = OroGen::Loaders::PkgConfig.new(OroGen.orocos_target)
+                OroGen::Loaders::RTT.setup_loader(loader)
+                @orogen_loader = loader
+            end
+            @orogen_loader
+        end
+
+        def self.load_orogen_typekit(loader, name, debug)
             begin
-                master_project.load_orogen_project(name)
+                loader.typekit_model_from_name(name)
+            rescue Interrupt; raise
+            rescue Exception => e
+                if Rock::Inspect::debug
+                    raise
+                end
+                Orocos.warn "cannot load the installed oroGen typekit #{name}"
+                Orocos.warn "     #{e.message}"
+                nil
+            end
+        end
+
+        def self.load_orogen_project(loader, name, debug)
+            begin
+                loader.project_model_from_name(name)
             rescue Interrupt; raise
             rescue Exception => e
                 if Rock::Inspect::debug
@@ -111,10 +133,10 @@ module Rock
             return found if !unkown.empty?
 
             #find all tasks which are matching the pattern
-            Orocos.available_task_models.each do |name, project_name|
+            orogen_loader.available_task_models.each do |name, project_name|
                 if name =~ pattern || project_name =~ pattern
-                    if tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
-                        task = tasklib.self_tasks.find { |t| t.name == name }
+                    if tasklib = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
+                        task = tasklib.self_tasks.values.find { |t| t.name == name }
                         if(task_match?(task,pattern,filter))
                             found << SearchItem.new(:name => "TaskContext::#{task.name}",
                                                     :project_name => project_name,
@@ -131,9 +153,9 @@ module Rock
             filter,unkown = Kernel::filter_options(filter,[:types,:ports])
             return found if !unkown.empty?
             #find all tasks which are matching the pattern
-            Orocos.available_task_models.each do |name, project_name|
-                if tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
-                    tasklib.self_tasks.each do |task|
+            orogen_loader.available_task_models.each do |name, project_name|
+                if tasklib = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
+                    tasklib.self_tasks.each_value do |task|
                         task.each_port do |port|
                             if(port_match?(port,pattern,filter))
                                 found <<  SearchItem.new(:name => "Port::#{port.name}",
@@ -152,26 +174,22 @@ module Rock
             found = Array.new
             filter,unkown = Kernel::filter_options(filter,[:types])
             return found if !unkown.empty?
-            Orocos.available_projects.each_key do |project_name|
+            orogen_loader.available_projects.each_key do |project_name|
                 seen = Set.new
-                next if !@master_project.has_typekit?(project_name)
+                next if !orogen_loader.has_typekit?(project_name)
 
-                project = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
-                next if !project
-                typekit = project.typekit
+                typekit = load_orogen_typekit(orogen_loader, project_name, Rock::Inspect::debug)
+                next if !typekit
                 matching_types = typekit.typelist.grep(pattern)
-                if !matching_types.empty?
-                    @master_project.using_typekit(project_name)
-                    matching_types.each do |type_name|
-                        if !seen.include?(type_name)
-                            object = @master_project.find_type(type_name)
-                            if type_match?(object,pattern,filter)
-                                found << SearchItem.new(:name => "Type::#{type_name}",
-                                                        :project_name => project_name,
-                                                            :object => object)
-                            end
-                            seen << type_name
+                matching_types.each do |type_name|
+                    if !seen.include?(type_name)
+                        object = orogen_loader.resolve_type(type_name)
+                        if type_match?(object,pattern,filter)
+                            found << SearchItem.new(:name => "Type::#{type_name}",
+                                                    :project_name => project_name,
+                                                    :object => object)
                         end
+                        seen << type_name
                     end
                 end
             end
@@ -182,9 +200,9 @@ module Rock
             found = []
             filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deployments])
             return found if !unkown.empty?
-            Orocos.available_projects.each_key do |project_name|
-                tasklib = load_orogen_project(@master_project, project_name, Rock::Inspect::debug)
-                tasklib.deployers.each do |deployer|
+            orogen_loader.available_projects.each_key do |project_name|
+                tasklib = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
+                tasklib.deployers.values.each do |deployer|
                     if pattern === deployer.name || pattern === tasklib.name ||
                         deployer.task_activities.find { |t| pattern === t.name || pattern === t.task_model.name }
                         found << SearchItem.new(:name => "Deployment::#{deployer.name}",
@@ -212,14 +230,14 @@ module Rock
             # Either use all available projects or subset, as defined by the previous contrains 
             projects=Array.new
             if !use_whitelist 
-                Orocos.available_projects.each {|name,project| projects << name}
+                orogen_loader.available_projects.each {|name,project| projects << name}
             else
                 found.each {|item| projects << item.name }
             end
 
             projects.each do |name|
                 if project_match?(name,pattern,filter)
-                    if tasklib = load_orogen_project(@master_project, name, Rock::Inspect::debug)
+                    if tasklib = load_orogen_project(orogen_loader, name, Rock::Inspect::debug)
                         tasklib.deployers.each do |deployment|
                                 found << SearchItem.new(:name => "Deployment::#{deployment.name}",
                                                         :project_name => name,
