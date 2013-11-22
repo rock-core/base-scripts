@@ -336,11 +336,6 @@ module Rock
             Orocos.default_working_directory = Bundles.log_dir
             ENV['ORO_LOGFILE'] = File.join(Bundles.log_dir, "orocos.orocosrb-#{::Process.pid}.txt")
 
-            # Load configuration directories
-            find_dirs('models', 'orogen', :order => :specific_last, :all => true).each do |dir|
-                Orocos.register_orogen_files(dir)
-            end
-
             Orocos.load
 
             # Load configuration directories
