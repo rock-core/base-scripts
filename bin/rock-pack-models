@@ -1,0 +1,20 @@
+#! /bin/sh
+
+if test -z "$1"; then
+    usage
+    exit 1
+elif test -z "$AUTOPROJ_CURRENT_ROOT"; then
+    echo "AUTOPROJ_CURRENT_ROOT is empty, did you source the installation's env.sh ?"
+    exit 1
+elif ! test -d "$AUTOPROJ_CURRENT_ROOT"; then
+    echo "$AUTOPROJ_CURRENT_ROOT does not exist"
+    exit 1
+elif ! test -d "$AUTOPROJ_CURRENT_ROOT/install/share/orogen"; then
+    echo "$AUTOPROJ_CURRENT_ROOT/install/share/orogen does not exist"
+    exit 1
+fi
+
+target=$PWD/$1.tar.bz2
+(cd $AUTOPROJ_CURRENT_ROOT/install/share/;
+tar cjf $target orogen --exclude plugins)
+
