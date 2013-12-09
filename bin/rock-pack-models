@@ -1,5 +1,14 @@
 #! /bin/sh
 
+usage() {
+    echo "rock-pack-models PACKNAME"
+    echo "creates a .tar.bz2 containing the model files needed to do modelling"
+    echo "in bundles without installing the components"
+    echo ""
+    echo "the file created is called PACKNAME.tar.bz2"
+    exit 0
+}
+
 if test -z "$1"; then
     usage
     exit 1
@@ -17,4 +26,4 @@ fi
 target=$PWD/$1.tar.bz2
 (cd $AUTOPROJ_CURRENT_ROOT/install/share/;
 tar cjf $target orogen --exclude plugins)
-
+echo "pack created in $target"
