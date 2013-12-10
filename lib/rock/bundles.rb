@@ -445,6 +445,22 @@ module Rock
             task
         end
 
+        def self.log_all(*args, &block)
+            Orocos.log_all(*args, &block)
+        end
+
+        def self.log_all_ports(*args, &block)
+            Orocos.log_all_ports(*args, &block)
+        end
+
+        def self.log_all_configuration(*args, &block)
+            Orocos.log_all_configuration(*args, &block)
+        end
+
+        def self.watch(*args, &block)
+            Orocos.watch(*args, &block)
+        end
+
         def self.parse_script_options(argv)
             parser = OptionParser.new do |opt|
                 opt.on('--gdb[=TASKS]', String, 'run the comma-separated list of deployments using gdbserver. Do all if no arguments are given.') do |gdb|
