@@ -1,0 +1,25 @@
+#! /bin/sh
+
+if ! test -d $AUTOPROJ_CURRENT_ROOT; then
+    echo "no AUTOPROJ_CURRENT_ROOT set, did you source env.sh ?"
+    exit 1
+fi
+
+if test -z "$1"; then
+    echo "usage: rock-autoproj-snapshot TAG_NAME"
+    exit 1
+fi
+
+set -e
+
+target=$(mktemp -d)
+autoproj snapshot $target/$1
+cd "$target/$1"
+git add archives
+git add manifest overrides.yml
+git commit -m "rock-autoproj-snapshot $1"
+git tag -f "$1"
+cd $AUTOPROJ_CURRENT_ROOT/autoproj
+git fetch --tags "$target/$1"
+rm -rf $target
+
