@@ -4,36 +4,37 @@ module Rock
 module WidgetTemplate
 
 CMAKE = 
-%{find_package(Qt4 REQUIRED QtCore QtGui QtOpengl QtDesigner)
-include_directories(${QT_INCLUDE_DIR})
-include_directories(${QT_QTCORE_INCLUDE_DIR})
-include_directories(${QT_QTGUI_INCLUDE_DIR})
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
+%{set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 SET(MOC_HDRS
-    <%= @widget_klassname %>.h
-    <%= @plugin_klassname %>.h
+    <%= @widget_klassname %>.hpp
+    <%= @plugin_klassname %>.hpp
 )
 
 SET(HDRS
-    <%= @widget_klassname %>.h
+    <%= @widget_klassname %>.hpp
 )
 
 FILE(GLOB SRCS
-    *.cc
+    *.cpp
+)
+
+FILE(GLOB UI_FILES
+    *.ui
 )
 
 SET(QtApp_RCCS resources.qrc)
-QT4_ADD_RESOURCES(QtApp_RCC_SRCS ${QtApp_RCCS})
 
 rock_vizkit_widget(<%= @widget_klassname %>
-    SOURCES ${SRCS} ${QtApp_RCC_SRCS} 
+    SOURCES ${SRCS} ${QtApp_RCC_SRCS}
     HEADERS ${HDRS}
     MOC ${MOC_HDRS}
-    DEPS_PKGCONFIG base-types base-lib QtCore QtGui
-    DEPS_CMAKE
-    LIBS ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} ${QT_QTOPENGL_LIBRARY} ${QT_QTDESIGNER_LIBRARY}
+    DEPS_PKGCONFIG QtCore QtGui
+    UI ${UI_FILES}
 )
+
+QT4_ADD_RESOURCES(QtApp_RCC_SRCS ${QtApp_RCCS})
+
 }
 # ------------------------------------------------------------------------------
 
@@ -49,8 +50,8 @@ QRC =
 # ------------------------------------------------------------------------------
 
 PLUGIN_HEADER = 
-%{#ifndef <%= @plugin_klassname.upcase %>_H
-#define <%= @plugin_klassname.upcase %>_H
+%{#ifndef <%= @plugin_klassname.upcase %>_HPP
+#define <%= @plugin_klassname.upcase %>_HPP
 
 #include <QtGui>
 #include <QtDesigner/QDesignerCustomWidgetInterface>
@@ -80,13 +81,13 @@ private:
     bool initialized; 
 };
 
-#endif /* <%= @plugin_klassname.upcase %>_H */  
+#endif /* <%= @plugin_klassname.upcase %>_HPP */  
 }
 # ------------------------------------------------------------------------------
 
 PLUGIN_SOURCE =
-%{#include "<%= @plugin_klassname %>.h"
-#include "<%= @widget_klassname %>.h"
+%{#include "<%= @plugin_klassname %>.hpp"
+#include "<%= @widget_klassname %>.hpp"
 
 Q_EXPORT_PLUGIN2(<%= @widget_klassname %>, <%= @plugin_klassname %>)
 
@@ -142,7 +143,7 @@ QString <%= @plugin_klassname %>::group() const {
 }
 
 QString <%= @plugin_klassname %>::includeFile() const {
-    return "<%= @widget_klassname %>/<%= @widget_klassname %>.h";
+    return "<%= @widget_klassname %>/<%= @widget_klassname %>.hpp";
 }
 
 QString <%= @plugin_klassname %>::name() const {
@@ -173,8 +174,8 @@ void <%= @plugin_klassname %>::initialize(QDesignerFormEditorInterface *core)
 # ------------------------------------------------------------------------------
 
 WIDGET_HEADER =
-%{#ifndef <%= @widget_klassname.upcase %>_H
-#define <%= @widget_klassname.upcase %>_H
+%{#ifndef <%= @widget_klassname.upcase %>_HPP
+#define <%= @widget_klassname.upcase %>_HPP
 
 #include <QtGui>
 
@@ -186,12 +187,12 @@ public:
     virtual ~<%= @widget_klassname %>();
 };
 
-#endif /* <%= @widget_klassname.upcase %>_H */
+#endif /* <%= @widget_klassname.upcase %>_HPP */
 }
 # ------------------------------------------------------------------------------
 
 WIDGET_SOURCE =
-%{#include "<%= @widget_klassname %>.h"
+%{#include "<%= @widget_klassname %>.hpp"
 
 <%= @widget_klassname %>::<%= @widget_klassname %>(QWidget *parent)
     : QWidget(parent)
@@ -218,7 +219,7 @@ WIDGET_SOURCE =
 WIDGET_TEST_SOURCE =
 %{#include <QtGui/QApplication>
 
-#include "<%= @widget_klassname %>.h"
+#include "<%= @widget_klassname %>.hpp"
 
 int main(int argc, char *argv[]) 
 {

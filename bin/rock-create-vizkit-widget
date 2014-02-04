@@ -37,7 +37,11 @@ if ARGV.length != 1
     exit
 end
 
+puts "Enter name of the C++ class being created:"
+class_name = $stdin.gets.chomp
+raise "Invalid C++ class name: #{class_name}" if class_name =~ /[ \W]/
+
 # Generate widget and designer plugin from arguments and options
-Rock::DesignerPluginGenerator.new(ARGV[0], @options.icon_path, ARGV[1]).generate
+Rock::DesignerPluginGenerator.new(ARGV[0],class_name, @options.icon_path, ARGV[1]).generate
 
 puts "Finished. Please update the manifest.xml with package dependencies and other useful information."

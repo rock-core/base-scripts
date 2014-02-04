@@ -17,8 +17,8 @@ module Rock
       
         @data = nil
         
-        def initialize( widget_klassname, icon_path, whats_this )
-            @data = DesignerPluginData::new(widget_klassname, icon_path, whats_this)
+        def initialize(project_name,widget_klassname, icon_path, whats_this )
+            @data = DesignerPluginData::new(project_name,widget_klassname, icon_path, whats_this)
         end
         
         def generate(delete_old_files=true)
@@ -29,7 +29,7 @@ module Rock
     
         def generate_files(data,delete_old_files)
             # Base directory to be created
-            @base_path = data.widget_klassname + "/"
+            @base_path = data.project_name + "/"
 
             # Source directory for the widget and plugin code
             src_path = @base_path + "src/"
@@ -39,6 +39,9 @@ module Rock
 
             # path of the vizkit test script
             test_script = File.join(@base_path,"scripts","test.rb")
+
+            # path of the test folder
+            test_path = File.join(@base_path,"test")
 
             # Widget resource directory
             qrc_path = src_path + "resources/"
@@ -53,14 +56,17 @@ module Rock
 
             begin
                 #copy package config file
-                package_filename = data.widget_klassname + ".pc.in"
+                package_filename = data.project_name + ".pc.in"
                 FileUtils.cp(File.join(src_path, package_filename), File.join(@base_path, package_filename))
 
                 # Source folder. If it already exists: backup by renaming.
                 create_folder(src_path,delete_old_files)
                 create_folder(qrc_path,delete_old_files)
                 remove_file(vizkit_widget,delete_old_files)
-                remove_file(test_script,delete_old_files)
+                remove_file(File.join(test_path,"CMakeLists.txt"),delete_old_files)
+                remove_file(File.join(test_path,"suite.cpp"),delete_old_files)
+                remove_file(File.join(test_path,"test_Dummy.cpp"),delete_old_files)
+
                 create_folder(File.join(@base_path,"scripts"),delete_old_files)
 
                 FileUtils.mv(File.join(@base_path,package_filename),src_path)
@@ -68,10 +74,10 @@ module Rock
                 ## Generate code from templates
                 write_file(src_path + "CMakeLists.txt", erb_result(WidgetTemplate::CMAKE, data))
                 write_file(src_path + "resources.qrc", erb_result(WidgetTemplate::QRC, data))
-                write_file(src_path + "#{data.plugin_klassname}.h", erb_result(WidgetTemplate::PLUGIN_HEADER, data))
-                write_file(src_path + "#{data.plugin_klassname}.cc", erb_result(WidgetTemplate::PLUGIN_SOURCE, data))
-                write_file(src_path + "#{data.widget_klassname}.h", erb_result(WidgetTemplate::WIDGET_HEADER, data))
-                write_file(src_path + "#{data.widget_klassname}.cc", erb_result(WidgetTemplate::WIDGET_SOURCE, data))
+                write_file(src_path + "#{data.plugin_klassname}.hpp", erb_result(WidgetTemplate::PLUGIN_HEADER, data))
+                write_file(src_path + "#{data.plugin_klassname}.cpp", erb_result(WidgetTemplate::PLUGIN_SOURCE, data))
+                write_file(src_path + "#{data.widget_klassname}.hpp", erb_result(WidgetTemplate::WIDGET_HEADER, data))
+                write_file(src_path + "#{data.widget_klassname}.cpp", erb_result(WidgetTemplate::WIDGET_SOURCE, data))
                 write_file(vizkit_widget, erb_result(WidgetTemplate::WIDGET_RUBY_INTEGRATION, data))
                 write_file(test_script, erb_result(WidgetTemplate::TEST_SCRIPT, data))
 
@@ -121,13 +127,15 @@ module Rock
     # Template data
     # Contains relevant information the widget and designer plugin to be generated.
     class DesignerPluginData
+        attr_reader :project_name
         attr_reader :plugin_klassname
         attr_reader :widget_klassname
         attr_reader :test_binary_name
         attr_reader :icon_path
         attr_reader :whats_this
 
-        def initialize( widget_klassname, icon_path, whats_this )
+        def initialize(project_name,widget_klassname, icon_path, whats_this )
+            @project_name = project_name
             @widget_klassname = widget_klassname
             @plugin_klassname = widget_klassname + "Plugin"
             @test_binary_name = widget_klassname.downcase + "Test"
