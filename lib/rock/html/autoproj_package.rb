@@ -17,7 +17,9 @@ module Rock
                 if page.respond_to?(:api_url) && (url = page.api_url(pkg))
                     url
                 else
-                    REXML::XPath.each(pkg.description.xml, "//api").first
+                    if pkg.description
+                        REXML::XPath.each(pkg.description.xml, "//api").first
+                    end
                 end
             end
 
