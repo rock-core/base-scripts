@@ -35,14 +35,14 @@ fi
 orogen create $name
 cd $name
 if test -z "$ROCK_TEMPLATE_PREFIX"; then
-    ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock-base/template_
+    ROCK_TEMPLATE_PREFIX=https://github.com/rock-core/base-templates-
     ROCK_TEMPLATE_SUFFIX=.git
-    wget --timeout=5 http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/manifest.xml
-    wget --timeout=5 http://gitorious.org/rock-base/template_cmake_lib/blobs/raw/master/config_manifest.sh
+    wget --timeout=5 https://raw.githubusercontent.com/rock-core/base-templates-cmake_lib/master/manifest.xml
+    wget --timeout=5 https://raw.githubusercontent.com/rock-core/base-templates-cmake_lib/master/config_manifest.sh
 
     if [ $? != 0 ]; then
 	echo
-	echo "ROCK_TEMPLATE_PREFIX is not set and manifest can currently not be retrieved via gitorious.org"
+	echo "ROCK_TEMPLATE_PREFIX is not set and manifest can currently not be retrieved via github.org"
 	echo "Verify your internet connnection or set ROCK_TEMPLATE_PREFIX to <your-rock-installation>/base/templates/"
 	echo
 	exit 2
