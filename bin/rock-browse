@@ -28,6 +28,7 @@ main_layout.add_layout(menu_layout)
 main_layout.add_widget(splitter)
 
 class ModelListWidget < Qt::TreeWidget
+    attr_reader :loader
     attr_reader :roots
     attr_reader :dummy_models
 
@@ -47,9 +48,16 @@ class ModelListWidget < Qt::TreeWidget
         'OS Packages'
     ]
 
-    def initialize(parent = nil)
-        super
+    def self.default_loader
+        loader = OroGen::Loaders::PkgConfig.new(OroGen.orocos_target)
+        OroGen::Loaders::RTT.setup_loader(loader)
+        loader
+    end
 
+    def initialize(parent = nil, loader = self.class.default_loader)
+        super(parent)
+
+        @loader = loader
         @dummy_models = Array.new
 
         @roots = Array.new
@@ -84,13 +92,13 @@ class ModelListWidget < Qt::TreeWidget
         end
         clear
         
-        Orocos.available_types.keys.sort.each do |name|
+        loader.available_types.keys.sort.each do |name|
             item = Qt::TreeWidgetItem.new(roots[ROLE_OROGEN_TYPE])
             item.set_text(0, name)
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TYPE))
         end
 
-        Orocos.available_task_models.keys.sort.each do |name|
+        loader.available_task_models.keys.sort.each do |name|
             item = Qt::TreeWidgetItem.new(roots[ROLE_OROGEN_TASK])
             item.set_text(0, name)
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TASK))
@@ -137,8 +145,8 @@ splitter.add_widget(view)
 splitter.add_widget(text)
 
 displays = [
-    Orocos::HTML::TaskContext.new(page),
-    Orocos::HTML::Type.new(page),
+    OroGen::HTML::TaskContext.new(page),
+    OroGen::HTML::Type.new(page),
     Rock::HTML::AutoprojPackage.new(page),
     Rock::HTML::AutoprojPackageSet.new(page),
     Rock::HTML::AutoprojOSDep.new(page),
