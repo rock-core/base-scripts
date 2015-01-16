@@ -31,9 +31,9 @@ class Main < Qt::Widget
         displays[ModelListWidget::ROLE_OROGEN_TASK] =
             OroGen::HTML::TaskContext.new(page)
         displays[ModelListWidget::ROLE_INSTALLED_PACKAGE] =
-            Rock::HTML::AutoprojPackage.new(page),
+            Rock::HTML::AutoprojPackage.new(page)
         displays[ModelListWidget::ROLE_AVAILABLE_PACKAGE] =
-            Rock::HTML::AutoprojPackage.new(page),
+            Rock::HTML::AutoprojPackage.new(page)
         displays[ModelListWidget::ROLE_PACKAGE_SET] =
             Rock::HTML::AutoprojPackageSet.new(page)
         displays[ModelListWidget::ROLE_OSDEPS] =
@@ -54,7 +54,7 @@ class Main < Qt::Widget
 
         @view = ModelListWidget.new(splitter)
         text = Qt::WebView.new(splitter)
-        @page = MetaRuby::GUI::HTML::Page.new(text.page)
+        @page = Page.new(text.page)
         splitter.add_widget(view)
         splitter.add_widget(text)
 
@@ -68,6 +68,15 @@ class Main < Qt::Widget
                 render_item(item)
             end
         end
+
+        page.connect(SIGNAL('linkClicked(const QUrl&)')) do |url|
+            if url.path == '/rock-browse'
+                role = Integer(url.queryItemValue('role'))
+                name = url.queryItemValue('name')
+                view.select(role, name)
+                render(role, name)
+            end
+        end
     end
 
     def render_item(item)
@@ -76,8 +85,11 @@ class Main < Qt::Widget
                    role.to_int
                end
         name = item.text(0)
+        render(role, name)
+    end
 
-        page.clear
+    def render(role, name)
+        page.clear(true)
         if role == ModelListWidget::ROLE_OROGEN_TYPE
             Orocos.load_typekit_for(name, false)
             displays[role].render(Orocos.registry.get(name))
@@ -93,6 +105,8 @@ class Main < Qt::Widget
         elsif role == ModelListWidget::ROLE_OSDEPS
             osdep = Rock::HTML::OSPackage.new(name)
             displays[role].render(osdep)
+        else
+            Kernel.raise ArgumentError, "invalid role #{role}"
         end
     end
 

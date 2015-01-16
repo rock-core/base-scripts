@@ -59,10 +59,10 @@ class ModelListWidget < Qt::TreeWidget
         if current = current_item
             current_type = current.data(0, Qt::UserRole)
             if current_type.null?
-                current = nil
+                current_name = nil
             else
                 current_type = current_type.to_int
-                current = current.text(0)
+                current_name = current.text(0)
             end
         end
         clear
@@ -103,12 +103,15 @@ class ModelListWidget < Qt::TreeWidget
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OSDEPS))
         end
 
-        if current
-            root = roots[current_type]
-            matches = findItems(root, Qt::MatchExactly, 0)
-            if !matches.empty?
-                self.current_item = matches.first
-            end
+        if current_type && current_name
+            select(current_type, current_name)
+        end
+    end
+
+    def select(role, name)
+        matches = findItems(name, Qt::MatchExactly | Qt::MatchRecursive, 0)
+        if !matches.empty?
+            self.current_item = matches.first
         end
     end
 end
