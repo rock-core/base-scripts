@@ -73,23 +73,25 @@ class Main < Qt::Widget
             if url.path == '/rock-browse'
                 role = Integer(url.queryItemValue('role'))
                 name = url.queryItemValue('name')
-                view.select(role, name)
-                render(role, name)
+                select(name, role)
             end
         end
     end
 
     def render_item(item)
-        role = item.data(0, Qt::UserRole)
-        role = if !role.null?
-                   role.to_int
-               end
+        role = view.role_from_item(item)
         name = item.text(0)
-        render(role, name)
+        render(name, role)
     end
 
-    def render(role, name)
-        page.clear(true)
+    def select(name, role = nil)
+        if item = view.select(name, role)
+            render_item(item)
+        end
+    end
+
+    def render(name, role)
+        page.clear
         if role == ModelListWidget::ROLE_OROGEN_TYPE
             Orocos.load_typekit_for(name, false)
             displays[role].render(Orocos.registry.get(name))

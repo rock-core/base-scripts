@@ -10,4 +10,8 @@ main = Rock::Browse::Main.new
 main.reload
 main.show
 
+if name = ARGV.first
+    main.select(name)
+end
+
 app.exec

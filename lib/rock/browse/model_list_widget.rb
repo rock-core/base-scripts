@@ -108,10 +108,24 @@ class ModelListWidget < Qt::TreeWidget
         end
     end
 
-    def select(role, name)
+    def role_from_item(item)
+        role = item.data(0, Qt::UserRole)
+        if !role.null?
+            role.to_int
+        end
+    end
+
+    def select(name, role = nil)
         matches = findItems(name, Qt::MatchExactly | Qt::MatchRecursive, 0)
-        if !matches.empty?
-            self.current_item = matches.first
+        if role
+            single_match = matches.find do |item|
+                role == role_from_item(item)
+            end
+        else single_match = matches.first
+        end
+
+        if single_match
+            self.current_item = single_match
         end
     end
 end
