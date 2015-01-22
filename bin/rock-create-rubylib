@@ -28,7 +28,7 @@ else
 fi
 
 if test -z "$ROCK_TEMPLATE_PREFIX"; then
-    ROCK_TEMPLATE_PREFIX=git://gitorious.org/rock-base/template_
+    ROCK_TEMPLATE_PREFIX=https://github.com/rock-core/base-templates-
     ROCK_TEMPLATE_SUFFIX=.git
 fi
 git clone ${ROCK_TEMPLATE_PREFIX}ruby_lib${ROCK_TEMPLATE_SUFFIX} $path
