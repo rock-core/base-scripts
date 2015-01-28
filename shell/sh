@@ -45,6 +45,48 @@ __rock_bundle_unsel() {
     unset ROCK_BUNDLE
 }
 
+__rock_log_level() {
+    if test "x$#" != "x1" || test "$1" = "--help" || test "$1" = "-h"; then
+        echo "usage: $0 <log-level>"
+        echo "Allows setting of logging level for Orocos and Rock in parallel."
+        echo ""
+        echo "Available general logging levels:"
+        echo "    DEBUG, INFO, WARN, ERROR, FATAL"
+        echo "Applied to Orocos only"
+        echo "    REALTIME, CRITICAL"
+        echo ""
+        echo "Current setting of environmental variables:"
+        echo "    BASE_LOG_LEVEL=$BASE_LOG_LEVEL"
+        echo "    ORO_LOGLEVEL=$ORO_LOGLEVEL"
+        return
+    fi
+
+    if test "$1" = "REALTIME"; then
+        export ORO_LOGLEVEL=7
+        return
+    elif test "$1" = "CRITICAL"; then
+        export ORO_LOGLEVEL=2
+        return
+    fi
+
+    if test "$1" = "DEBUG"; then
+        export ORO_LOGLEVEL=6
+    elif test "$1" = "INFO"; then
+        export ORO_LOGLEVEL=5
+    elif test "$1" = "WARN" || test "$1" = "WARNING"; then
+        export ORO_LOGLEVEL=4
+    elif test "$1" = "ERROR"; then
+        export ORO_LOGLEVEL=3
+    elif test "$1" = "FATAL"; then
+        export ORO_LOGLEVEL=1
+    else
+        echo "Unknown logging level: $1"
+        return
+    fi
+
+    export BASE_LOG_LEVEL=$1
+}
+
 alias rock-bundle-sel=__rock_bundle_sel
 alias rock-bundle-unsel=__rock_bundle_unsel
 alias rock-bundle-default=__rock_bundle_default
@@ -53,3 +95,4 @@ alias bundle-unsel=__rock_bundle_unsel
 alias bundle-default=__rock_bundle_default
 alias bundle-find=rock-bundle-find
 alias bundle-info=rock-bundle-info
+alias rock-log-level=__rock_log_level
