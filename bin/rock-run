@@ -24,12 +24,16 @@ if filename
 end
 
 do_start = false
+do_log = false
 
 parser = OptionParser.new
 Orocos::Scripts.common_optparse_setup(parser)
 parser.banner = "rock-run [--gui] task_model task_name"
 parser.on '--start', 'starts the task' do
     do_start = true
+end
+parser.on '--log', 'activate logging' do
+    do_log = true
 end
 
 model, name = parser.parse(ARGV)
@@ -61,9 +65,13 @@ if !name
 end
 
 Orocos::Scripts.run model => name do |*processes|
+    if do_log
+        Orocos.log_all
+    end
+
     tasks = processes.map do |p|
         p.each_task.to_a
-    end.flatten
+    end.flatten.find_all { |t| t.model.name != "logger::Logger" }
 
     tasks.each do |t|
         Orocos::Scripts.conf(t)
