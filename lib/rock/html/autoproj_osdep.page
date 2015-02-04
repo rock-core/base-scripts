@@ -6,7 +6,7 @@ data.map do |files, info|
     if info.kind_of?(Hash)
         info = YAML.dump(info).split("\n")
         info.shift
-        info = info.join("\n      ")
+        info = info.join("\n  ")
     end
     if files.size > 1
         files = files[0..-2].join(", ") + " <strong>and</strong> " + files.last
@@ -16,10 +16,9 @@ data.map do |files, info|
 %>
 <strong>Defined in</strong> <%= files %> <strong>as</strong>
 
-<pre><code>
-<%= name %>:
-    <%= info %>
-</code></pre>
+<code><%= name %>:
+  <%= info %>
+</code>
 
 <%
 end
