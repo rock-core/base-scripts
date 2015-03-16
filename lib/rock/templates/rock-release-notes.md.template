@@ -16,28 +16,33 @@ $(document).ready(function () {
 });
 </script>
 
+New stuff
+---------
+
+Obsoleted package and functionality
+-----------------------------------
+
 <% if !new_packages.empty? %>
-<h1>New packages:</h1>
-<ul>
+<%= new_packages.size %> new packages
+-------------------------------------
 <% new_packages.sort.each do |pkg_name| %>
-    <li><%= pkg_name %></li>
+    * <%= pkg_name %>
 <% end %>
-</ul>
 <% end %>
+
 <% if !obsolete_packages.empty? %>
-<h1>Removed packages:</h1>
-<ul>
+<%= obsolete_packages.size %> removed packages
+----------------------------------------------
 <% obsolete_packages.sort.each do |pkg_name| %>
-    <li><%= pkg_name %></li>
+    * <%= pkg_name %>
 <% end %>
-</ul>
 <% end %>
 
 <% errors = errors.map(&:name).sort %>
-<p>Could not generate a changelog for <%= errors.size %> packages as their
+Could not generate a changelog for <%= errors.size %> packages as their
 version control does not support it: <% errors.each do |pkg_name| %>
-  <a href="#<%= pkg_name %>"><%= pkg_name %></a>
-<% end %></p>
+    [<%= pkg_name %>](#<%= pkg_name %>)
+<% end %>
 
 <table class="package_status">
 <% status.each do |pkg, from_commits, to_commits| %>
