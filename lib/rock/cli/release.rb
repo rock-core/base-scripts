@@ -57,6 +57,10 @@ module Rock
                     importer.show(package, release_name, RELEASE_VERSIONS)
                 end
             
+                def ensure_overrides_dir_present
+                    FileUtils.mkdir_p Autoproj.overrides_dir
+                end
+
                 def verify_release_name(release_name, options = Hash.new)
                     Kernel.validate_options options,
                         only_local: false
@@ -142,6 +146,7 @@ module Rock
                 end
 
                 versions = fetch_version_file(release_name)
+                ensure_overrides_dir_present
                 File.open(File.join(config_dir, RELEASE_VERSIONS), 'w') do |io|
                     io.write versions
                 end
