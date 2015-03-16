@@ -13,7 +13,8 @@ module Rock
 
                 ROCK_VCS_LOCATIONS = [
                     /gitorious.*\/rock(?:-\w+)?\//,
-                    /github.*\/rock(?:-\w+)?\//]
+                    /github.*\/rock(?:-\w+)?\//,
+                    /github.*\/orocos-toolchain\//]
 
                 def initialize(*args)
                     super
