@@ -1,6 +1,6 @@
 require 'thor'
 require 'autoproj'
-require 'rock/cli/release/admin'
+require 'rock/cli/release_admin'
 
 module Rock
     module CLI
@@ -202,7 +202,7 @@ module Rock
             end
 
             desc "admin", "commands to create releases"
-            subcommand "admin", Admin
+            subcommand "admin", ReleaseAdmin
         end
     end
 end
