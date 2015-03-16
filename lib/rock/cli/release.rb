@@ -20,8 +20,8 @@ module Rock
                 'github' => 'rock-core/buildconf',
                 'branch' => 'releases']
 
-            RELEASE_NOTES_FILE   = "overrides.d/25-release.md"
-            RELEASE_VERSIONS     = "overrides.d/25-release.yml"
+            RELEASE_NOTES    = "RELEASE_NOTES.md"
+            RELEASE_VERSIONS = "overrides.d/25-release.yml"
 
             attr_reader :config
             attr_reader :config_dir
@@ -49,7 +49,7 @@ module Rock
             no_commands do
                 def fetch_release_notes(release_name)
                     verify_release_name(release_name)
-                    importer.show(package, release_name, RELEASE_NOTES_FILE)
+                    importer.show(package, release_name, RELEASE_NOTES)
                 end
 
                 def fetch_version_file(release_name)
@@ -62,7 +62,7 @@ module Rock
                         only_local: false
 
                     importer.rev_parse(package, release_name)
-                    importer.show(package, release_name, RELEASE_NOTES_FILE)
+                    importer.show(package, release_name, RELEASE_NOTES)
                 rescue Autobuild::PackageException
                     if !options[:only_local]
                         # Try harder, fetch the remote branch
