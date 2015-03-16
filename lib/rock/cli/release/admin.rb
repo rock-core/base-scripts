@@ -12,8 +12,8 @@ module Rock
                 attr_reader :config_dir
 
                 ROCK_VCS_LOCATIONS = [
-                    /gitorious.*\/rock(?:-\w+)?\//,
-                    /github.*\/rock(?:-\w+)?\//,
+                    /gitorious.*\/rock(?:-[\w-]+)?\//,
+                    /github.*\/rock(?:-[\w-]+)?\//,
                     /github.*\/orocos-toolchain\//]
 
                 def initialize(*args)
@@ -38,9 +38,9 @@ module Rock
 
                     # Returns all packages that are necessary within the created
                     # release
-                    def all_necessary_packages(manifest)
+                    def all_necessary_packages(manifest, flavor = 'stable')
                         manifest.each_package_definition.find_all do |pkg|
-                            Rock.flavors.package_in_flavor?(pkg.name, 'stable')
+                            Rock.flavors.package_in_flavor?(pkg.name, flavor)
                         end
                     end
 
@@ -147,7 +147,10 @@ module Rock
                 option :update, type: :boolean, default: true, doc: "whether the RC branch should be updated even if it exists or not"
                 def create_rc
                     manifest = ensure_autoproj_initialized
-                    packages = all_necessary_packages(manifest)
+                    # We checkout and branch all packages, not only the stable
+                    # ones, to ease release of new packages. This does not mean
+                    # that we're going to release all of them, of course !
+                    packages = all_necessary_packages(manifest, 'master')
 
                     Autoproj.message "Checking out missing packages"
                     missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
@@ -185,7 +188,12 @@ module Rock
                         pkg = pkg.autobuild
                         if options[:update] || !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
                             pkg.importer.run_git_bare(pkg, 'remote', 'update')
-                            pkg.importer.run_git_bare(pkg, 'push', 'autobuild', "+refs/remotes/autobuild/stable:refs/heads/#{branch}")
+                            reference_branch =
+                                if Rock.flavors.package_in_flavor?(pkg.name, 'stable')
+                                    'stable'
+                                else 'master'
+                                end
+                            pkg.importer.run_git_bare(pkg, 'push', 'autobuild', "+refs/remotes/autobuild/#{reference_branch}:refs/heads/#{branch}")
                         end
                         versions << Hash[pkg.name => Hash['branch' => branch]]
                     end
@@ -203,6 +211,11 @@ module Rock
                     end
                     buildconf.importer.run_git_bare(buildconf, 'tag', '-f', 'rock-rc', notes_commit)
                     buildconf.importer.run_git_bare(buildconf, 'push', '-f', '--tags', buildconf.importer.push_to)
+                end
+
+                desc "delete-rc", "delete a release candidate environment created with create-rc"
+                option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+                def delete_rc
                 end
 
                 desc "checkout", "checkout all packages that are included in 'stable'. This is done by 'prepare'"
