@@ -140,6 +140,71 @@ module Rock
                     end
                 end
 
+                desc "create-rc", "create a release candidate environment"
+                option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+                option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
+                option :notes, doc: "whether it should generate release notes", type: :boolean, default: true
+                option :update, type: :boolean, default: true, doc: "whether the RC branch should be updated even if it exists or not"
+                def create_rc
+                    manifest = ensure_autoproj_initialized
+                    packages = all_necessary_packages(manifest)
+
+                    Autoproj.message "Checking out missing packages"
+                    missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
+                    missing_packages.each_with_index do |pkg, i|
+                        Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
+                        pkg.autobuild.import(checkout_only: true)
+                    end
+
+                    excluded_by_user = options[:exclude].flat_map do |entry|
+                        entry.split(',')
+                    end
+
+                    branch = options[:branch]
+                    versions = Array.new
+
+                    Autoproj.message "Creating the package sets RC branch"
+                    package_sets = manifest.each_remote_package_set.to_a
+                    package_sets.each_with_index do |pkg_set, i|
+                        Autoproj.message "  [#{i}/#{package_sets.size}] #{pkg_set.repository_id}"
+                        pkg = pkg_set.create_autobuild_package
+                        if options[:update] || !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                            pkg.importer.run_git_bare(pkg, 'remote', 'update')
+                            pkg.importer.run_git_bare(pkg, 'push', 'autobuild', "+refs/remotes/autobuild/master:refs/heads/#{branch}")
+                        end
+                        versions << Hash["pkg_set:#{pkg_set.repository_id}" => Hash['branch' => branch]]
+                    end
+
+                    Autoproj.message "Creating the packages RC branch"
+                    # Deal with the packages that are managed within Rock
+                    packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                        !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                    end
+                    packages_to_branch_out.each_with_index do |pkg, i|
+                        Autoproj.message "  [#{i + 1}/#{packages_to_branch_out.size}] #{pkg.name}"
+                        pkg = pkg.autobuild
+                        if options[:update] || !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                            pkg.importer.run_git_bare(pkg, 'remote', 'update')
+                            pkg.importer.run_git_bare(pkg, 'push', 'autobuild', "+refs/remotes/autobuild/stable:refs/heads/#{branch}")
+                        end
+                        versions << Hash[pkg.name => Hash['branch' => branch]]
+                    end
+                    ops = Autoproj::Ops::Snapshot.new(manifest)
+                    versions += ops.snapshot_packages(packages_to_snapshot.map { |pkg| pkg.autobuild.name })
+
+                    vcs = Autoproj::VCSDefinition.from_raw(ROCK_RELEASE_INFO)
+                    buildconf = Autoproj::Ops::Tools.
+                        create_autobuild_package(vcs, "main configuration", config_dir)
+                    version_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, Release::RELEASE_VERSIONS, "version file for tracking the release candidate") do |io|
+                        YAML.dump(versions, io)
+                    end
+                    notes_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, Release::RELEASE_NOTES, "release notes file to please rock-release", version_commit) do |io|
+                        io.puts "This is an empty file meant to allow rock-release to see rock-rc as a release"
+                    end
+                    buildconf.importer.run_git_bare(buildconf, 'tag', '-f', 'rock-rc', notes_commit)
+                    buildconf.importer.run_git_bare(buildconf, 'push', '-f', '--tags', buildconf.importer.push_to)
+                end
+
                 desc "checkout", "checkout all packages that are included in 'stable'. This is done by 'prepare'"
                 def checkout
                     manifest = ensure_autoproj_initialized
