@@ -6,6 +6,7 @@ module Rock
         class Release < Thor
             # Implementation of the rock-release admin subcommand
             class Admin < Thor
+                class_option :verbose, type: :boolean, default: false
                 def self.exit_on_failure?; true end
 
                 attr_reader :config_dir
@@ -22,6 +23,18 @@ module Rock
                 end
 
                 no_commands do
+                    def invoke_command(*args, &block)
+                        super
+                    rescue Exception => e
+                        Autoproj.error e.message
+                        if options[:verbose]
+                            e.backtrace.each do |bt|
+                                Autoproj.error "  #{bt}"
+                            end
+                        end
+                        exit 1
+                    end
+
                     # Returns all packages that are necessary within the created
                     # release
                     def all_necessary_packages(manifest)

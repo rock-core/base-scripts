@@ -2,9 +2,5 @@
 
 require 'thor'
 require 'rock/cli/release'
-begin
-    Rock::CLI::Release.start(ARGV)
-rescue Exception => e
-    Autoproj.error e.message
-    exit 1
-end
+Rock::CLI::Release.start(ARGV)
+
