@@ -200,7 +200,7 @@ module Rock
                 ops = Autoproj::Ops::Snapshot.new(manifest)
                 versions += ops.snapshot_packages(packages_to_snapshot.map { |pkg| pkg.autobuild.name })
 
-                vcs = Autoproj::VCSDefinition.from_raw(ROCK_RELEASE_INFO)
+                vcs = Autoproj::VCSDefinition.from_raw(Release::ROCK_RELEASE_INFO)
                 buildconf = Autoproj::Ops::Tools.
                     create_autobuild_package(vcs, "main configuration", config_dir)
                 version_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, Release::RELEASE_VERSIONS, "version file for tracking the release candidate") do |io|
