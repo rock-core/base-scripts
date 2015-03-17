@@ -127,6 +127,12 @@ module Rock
                 puts releases.sort.join("\n")
             end
 
+            desc "versions RELEASE_NAME",
+                "displays the version file of the given release"
+            def versions(release_name)
+                puts fetch_version_file(release_name)
+            end
+
             desc "notes RELEASE_NAME",
                 "displays the release notes for the given release"
             def notes(release_name)
