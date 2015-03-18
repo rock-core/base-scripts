@@ -21,13 +21,14 @@ module Rock
                 Autoproj.load_config
                 Autoproj::CmdLine.initialize_root_directory
                 @config_dir = Autoproj.config_dir
+                @manifest = Autoproj.manifest
             end
 
             no_commands do
                 def invoke_command(*args, &block)
                     super
                 rescue Exception => e
-                    Autoproj.error e.message
+                    Autoproj.error "#{e.message} (#{e.class})"
                     if options[:verbose]
                         e.backtrace.each do |bt|
                             Autoproj.error "  #{bt}"
