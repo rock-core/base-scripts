@@ -146,7 +146,9 @@ module Rock
                 def make_emails(pkg, enum, mailmap)
                     enum.map do |name, email|
                         if email
-                            filter_email(pkg, mailmap, name, email)
+                            if email = filter_email(pkg, mailmap, name, email)
+                                email.encode('UTF-8', undef: :replace)
+                            end
                         else
                             pkg.autobuild.message "%s: found #{name} without email"
                             nil
@@ -183,6 +185,7 @@ module Rock
                     if importer.kind_of?(Autobuild::Git)
                         authors = importer.run_git_bare(pkg.autobuild, "log", "--pretty=format:%aN;%aE", "-50")
                         authors = authors.sort.uniq.map do |git_entry|
+                            git_entry = git_entry.encode('UTF-8', undef: :replace)
                             name, email = git_entry.split(';')
                             filter_email(pkg, mailmap, name, email)
                         end.compact.sort.uniq
