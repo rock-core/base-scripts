@@ -46,8 +46,12 @@ module Rock
 
                 def ensure_autoproj_initialized
                     if !Autoproj.manifest
-                        Autoproj.silent do
+                        if options[:verbose]
                             Autoproj::CmdLine.initialize_and_load([])
+                        else
+                            Autoproj.silent do
+                                Autoproj::CmdLine.initialize_and_load([])
+                            end
                         end
                     end
                     Autoproj.manifest
