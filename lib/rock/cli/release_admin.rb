@@ -117,6 +117,183 @@ module Rock
 
                     result
                 end
+
+                def email_valid?(email)
+                    true
+                end
+
+                def filter_email(pkg, mailmap, name, email)
+                    if email_valid?(email)
+                        result = "#{name} <#{email.downcase}>"
+                        match = mailmap.find { |matcher, _| matcher === result }
+                        if match
+                            if !match[1]
+                                pkg.autobuild.warn "%s: obsolete entry #{result} (removed by provided mailmap)"
+                                nil
+                            else
+                                match[1]
+                            end
+                        else
+                            result
+                        end
+                    else
+                        pkg.autobuild.warn "%s: found invalid email for #{name}: #{email}"
+                        nil
+                    end
+                end
+
+                def make_emails(pkg, enum, mailmap)
+                    enum.map do |name, email|
+                        if email
+                            filter_email(pkg, mailmap, name, email)
+                        else
+                            pkg.autobuild.message "%s: found #{name} without email"
+                            nil
+                        end
+                    end.compact.sort.uniq
+                end
+
+                def email_destination(pkg, mailmap)
+                    pkg_manifest = pkg.autobuild.description
+                    if !rock_package?(pkg)
+                        if !(email_to = make_emails(pkg, pkg_manifest.each_rock_maintainer, mailmap)).empty?
+                            return email_to, true
+                        else
+                            pkg.autobuild.error "%s: nobody listed as a Rock-side maintainer"
+                            return
+                        end
+                    end
+
+                    rock_maintainers, maintainers, authors =
+                        make_emails(pkg, pkg_manifest.each_rock_maintainer, mailmap),
+                        make_emails(pkg, pkg_manifest.each_maintainer, mailmap),
+                        make_emails(pkg, pkg_manifest.each_author, mailmap)
+                    if rock_maintainers.empty? && maintainers.empty?
+                        if !authors.empty?
+                            return authors, false
+                        end
+                    else
+                        return rock_maintainers + maintainers, true
+                    end
+
+                    # This is a rock package, chances are, the commit authors
+                    # are who we are looking for
+                    importer = pkg.autobuild.importer
+                    if importer.kind_of?(Autobuild::Git)
+                        authors = importer.run_git_bare(pkg.autobuild, "log", "--pretty=format:%aN;%aE", "-50")
+                        authors = authors.sort.uniq.map do |git_entry|
+                            name, email = git_entry.split(';')
+                            filter_email(pkg, mailmap, name, email)
+                        end.compact.sort.uniq
+                        if !authors.empty?
+                            return authors, false
+                        end
+                    end
+
+                    pkg.autobuild.error "%s: nobody listed as maintainer, author, and could not extract valid information from the git history"
+                end
+
+                def compute_maintainers
+                    if options[:mailmap]
+                        mailmap = YAML.load(File.read(options[:mailmap]))
+                    else
+                        mailmap = Hash.new
+                    end
+                    manifest = ensure_autoproj_initialized
+                    master_packages = all_necessary_packages(manifest, 'master')
+                    stable_packages = all_necessary_packages(manifest, 'stable')
+
+                    maintainers = Hash.new
+
+                    master_packages -= stable_packages
+                    master_packages.each do |pkg|
+                        email_to, is_maintainer = email_destination(pkg, mailmap)
+                        if email_to
+                            email_to = email_to.sort
+                            m = (maintainers[email_to] ||= Maintainers.new(email_to, Hash.new, Hash.new))
+                            m.master_packages[pkg] ||= is_maintainer
+                        end
+                    end
+                    stable_packages.each do |pkg|
+                        email_to, is_maintainer = email_destination(pkg, mailmap)
+                        if email_to
+                            email_to = email_to.sort
+                            m = (maintainers[email_to] ||= Maintainers.new(email_to, Hash.new, Hash.new))
+                            m.stable_packages[pkg] ||= is_maintainer
+                        end
+                    end
+                    maintainers
+                end
+
+                def join_and_cut_at_70chars(array, indentation)
+                    result = Array.new
+                    line_size = 0
+                    line = Array.new
+
+                    target_w = 70 - indentation
+                    array.each do |entry|
+                        if line_size + entry.size + (line.size - 1) * 2 >= target_w
+                            result << line.join(", ")
+                            line_size = 0
+                            line.clear
+                        end
+                        line << entry
+                        line_size += entry.size
+                    end
+                    if !line.empty?
+                        result << line.join(", ")
+                    end
+                    result.join("\n" + " " * indentation)
+                end
+            end
+
+            Maintainers = Struct.new :emails, :master_packages, :stable_packages
+
+            DEFAULT_MAILMAP = File.expand_path("release_mailmap.yml", File.dirname(__FILE__))
+
+            desc 'maintainers', 'lists the known maintainers along with the packages they maintain'
+            option :mailmap, type: :string, default: DEFAULT_MAILMAP
+            def maintainers
+                maintainers = compute_maintainers
+
+                flat_maintainers = Hash.new
+                maintainers.each do |_, m|
+                    m.emails.each do |em|
+                        flat_maintainers[em] ||= [Array.new, Array.new]
+                        flat_maintainers[em][0].concat(m.master_packages.keys)
+                        flat_maintainers[em][1].concat(m.stable_packages.keys)
+                    end
+                end
+
+                flat_maintainers.sort_by { |em, _| em }.each do |email, (master, stable)|
+                    puts "#{email}:"
+                    puts "  #{master.size} master packages: #{master.map(&:name).sort.join(", ")}"
+                    puts "  #{stable.size} stable packages: #{stable.map(&:name).sort.join(", ")}"
+                end
+            end
+
+            RC_ANNOUNCEMENT_FROM = "Rock Developers <rock-dev@dfki.de>"
+            RC_ANNOUNCEMENT_TEMPLATE_PATH = File.expand_path(
+                File.join("..", "templates", "rock-release-announce-rc.email.template"),
+                File.dirname(__FILE__))
+
+            desc 'announce-rc RELEASE_NAME', 'generates the emails that warn the package maintainers about the RC'
+            option :mailmap, type: :string, default: DEFAULT_MAILMAP
+            def announce_rc(rock_release_name)
+                template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
+                compute_maintainers.each_value do |m|
+                    from = RC_ANNOUNCEMENT_FROM
+                    to = m.emails
+                    maintainers_of = m.master_packages.find_all { |_, m| m } +
+                        m.stable_packages.find_all { |_, m| m }
+                    maintainers_of = maintainers_of.map { |p, _| p.name }
+                    authors_of = m.master_packages.find_all { |_, m| !m } +
+                        m.stable_packages.find_all { |_, m| !m }
+                    authors_of = authors_of.map { |p, _| p.name }
+                    master_packages = m.master_packages.keys.map(&:name).sort
+                    stable_packages = m.stable_packages.keys.map(&:name).sort
+                    puts template.result(binding)
+                end
             end
 
             desc 'validate-maintainers', "checks that all packages have a maintainer"

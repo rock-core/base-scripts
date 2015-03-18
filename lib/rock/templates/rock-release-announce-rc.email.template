@@ -1,0 +1,50 @@
+You are receiving this email because we are preparing the release of <%= rock_release_name %>
+
+<% if !maintainers_of.empty? %>
+You are listed as maintainer for the following Rock packages:
+  <%= join_and_cut_at_70chars(maintainers_of.sort, 2) %>
+<% end %>
+
+<% if !authors_of.empty? %>
+<%= if maintainers_of.empty? then "The" else "In addition, the" end %> following Rock packages do not have a maintainer, you
+are therefore either receiving this email because you are listed as
+author in the package's manifest.xml, or because you are within the
+package's last 50 commits. Consider discussing among the package
+authors and/or interested parties (the authors are all receiving this
+email) to list at least one maintainer and add it using the
+<maintainer> tag in the manifest.xml file.
+  <%= join_and_cut_at_70chars(authors_of.sort, 2) %>
+<% end %>
+
+<% if !stable_packages.empty? %>
+<%= stable_packages.size %> packages have already been released in previous Rock releases.
+A rock-rc branch has been created in the package's repository based on
+the package's current 'stable' branch. If you update this branch, the
+new commits will be released at the same time than Rock:
+  <%= join_and_cut_at_70chars(stable_packages.sort, 2) %>
+<% end %>
+
+<% if !master_packages.empty? %>
+<%= master_packages.size %> packages are included in Rock but have not yet been released
+in previous Rock releases. It would be great to see it released
+alongside <%= rock_release_name %> !
+  <%= join_and_cut_at_70chars(master_packages.sort, 2) %>
+
+To do so, you can creat ean issue or pull request on Rock's package set
+repository, asking to add them to stable, or drop a line to
+rock-dev@dfki.de
+   https://github.com/rock-core/rock-package_set/issues/new
+
+A rock-rc branch has already been created in the package's repository
+based on the package's current 'master' branch. If you do decide to
+include your package in <%= rock_release_name %>, barring any change
+on your side, this is the state that is going to be released.  You can
+also choose to update this branch to for instance avoid releasing some
+experimental code.
+<% end %>
+
+Thank you for your contribution to Rock !
+
+The Rock Core team
+rock-dev@dfki.de
+
