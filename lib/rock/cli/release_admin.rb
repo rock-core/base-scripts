@@ -197,7 +197,7 @@ module Rock
                     pkg.autobuild.error "%s: nobody listed as maintainer, author, and could not extract valid information from the git history"
                 end
 
-                def compute_maintainers
+                def compute_maintainers(&filter)
                     if options[:mailmap]
                         mailmap = YAML.load(File.read(options[:mailmap]))
                     else
@@ -205,7 +205,13 @@ module Rock
                     end
                     manifest = ensure_autoproj_initialized
                     master_packages = all_necessary_packages(manifest, 'master')
+                    if filter
+                        master_packages = master_packages.find_all(&filter)
+                    end
                     stable_packages = all_necessary_packages(manifest, 'stable')
+                    if filter
+                        stable_packages = stable_packages.find_all(&filter)
+                    end
 
                     maintainers = Hash.new
 
@@ -285,18 +291,42 @@ module Rock
             option :mailmap, type: :string, default: DEFAULT_MAILMAP
             def announce_rc(rock_release_name)
                 template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
-                compute_maintainers.each_value do |m|
+                counter = 0
+
+                all_maintainers = compute_maintainers do |pkg|
+                    # Only look at packages in rock. rock.core, rock.tutorials
+                    # and orocos.toolchain are handled differently
+                    pkg.package_set.name == 'rock'
+                end
+
+                all_maintainers.each_value do |m|
                     from = RC_ANNOUNCEMENT_FROM
-                    to = m.emails
-                    maintainers_of = m.master_packages.find_all { |_, m| m } +
-                        m.stable_packages.find_all { |_, m| m }
+                    to = m.emails.map { |em| em.encode('UTF-8', undef: :replace) }
+                    rock_master_packages = m.master_packages.find_all { |p, _| rock_package?(p) }
+                    rock_stable_packages = m.stable_packages.find_all { |p, _| rock_package?(p) }
+
+                    maintainers_of = rock_master_packages.find_all { |_, m| m } +
+                        rock_stable_packages.find_all { |_, m| m }
                     maintainers_of = maintainers_of.map { |p, _| p.name }
-                    authors_of = m.master_packages.find_all { |_, m| !m } +
-                        m.stable_packages.find_all { |_, m| !m }
+                    authors_of = rock_master_packages.find_all { |_, m| !m } +
+                        rock_stable_packages.find_all { |_, m| !m }
                     authors_of = authors_of.map { |p, _| p.name }
-                    master_packages = m.master_packages.keys.map(&:name).sort
-                    stable_packages = m.stable_packages.keys.map(&:name).sort
-                    puts template.result(binding)
+
+                    rock_master_packages = rock_master_packages.map { |p, _| p.name }.sort
+                    rock_stable_packages = rock_stable_packages.map { |p, _| p.name }.sort
+                    external_master_packages = m.master_packages.keys.map(&:name) -
+                        rock_master_packages
+                    external_stable_packages = m.stable_packages.keys.map(&:name) -
+                        rock_stable_packages
+
+                    File.open("#{counter}.email", 'w') do |io|
+                        io.puts "From: #{from}"
+                        io.puts "To: #{to.join(", ")}"
+                        io.puts
+                        io.write template.result(binding).encode('UTF-8', undef: :replace)
+                    end
+                    puts "written #{counter}.email"
+                    counter += 1
                 end
             end
 
