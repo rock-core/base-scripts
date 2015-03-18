@@ -142,21 +142,24 @@ module Rock
             desc 'switch RELEASE_NAME', 'switch to a release, master or stable'
             def switch(release_name)
                 if release_name == "master"
+                    FileUtils.rm_f File.join(config_dir, RELEASE_VERSIONS)
                     Autoproj.config.set("ROCK_SELECTED_FLAVOR", "master")
-                    Autoproj.config.save
-                    return
+                    Autoproj.save_config
+                    Autoproj.message "successfully setup flavor #{release_name}"
                 elsif release_name == "stable"
+                    FileUtils.rm_f File.join(config_dir, RELEASE_VERSIONS)
                     Autoproj.config.set("ROCK_SELECTED_FLAVOR", "stable")
-                    Autoproj.config.save
-                    return
+                    Autoproj.save_config
+                    Autoproj.message "successfully setup flavor #{release_name}"
+                else
+                    versions = fetch_version_file(release_name)
+                    ensure_overrides_dir_present
+                    File.open(File.join(config_dir, RELEASE_VERSIONS), 'w') do |io|
+                        io.write versions
+                    end
+                    Autoproj.message "successfully setup release #{release_name}"
                 end
 
-                versions = fetch_version_file(release_name)
-                ensure_overrides_dir_present
-                File.open(File.join(config_dir, RELEASE_VERSIONS), 'w') do |io|
-                    io.write versions
-                end
-                Autoproj.message "successfully setup release #{release_name}"
                 Autoproj.message "  autoproj status will tell you what has changed"
                 Autoproj.message "  aup --all will attempt to include the new release changes to your working copy"
                 Autoproj.message "  aup --all --reset will (safely) reset your working copy to the release's state"
