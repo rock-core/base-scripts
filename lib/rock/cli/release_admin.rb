@@ -403,11 +403,13 @@ module Rock
             def delete_rc
             end
 
-            desc "checkout", "checkout all packages that are included in 'stable'. This is done by 'prepare'"
+            desc "checkout", "checkout all packages that are included in a given flavor (stable by default). This is done by 'prepare'"
+            option 'flavor', type: :string, default: :stable
             def checkout
                 manifest = ensure_autoproj_initialized
-                all_necessary_packages(manifest).each do |pkg|
-                    pkg.autobuild.import(checkout_only: true)
+                Autobuild.do_update = true
+                all_necessary_packages(manifest, options[:flavor].to_s).each do |pkg|
+                    pkg.autobuild.import(checkout_only: false, only_local: true)
                 end
             end
 
