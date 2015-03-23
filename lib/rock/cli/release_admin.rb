@@ -288,10 +288,14 @@ module Rock
                 File.dirname(__FILE__))
 
             desc 'announce-rc RELEASE_NAME', 'generates the emails that warn the package maintainers about the RC'
-            option :mailmap, type: :string, default: DEFAULT_MAILMAP
+            option :sendgrid_user, type: :string,
+                doc: 'the sendgrid user that should be used to access the API to send the emails'
+            option :sendgrid_key, type: :string,
+                doc: 'the sendgrid key that should be used to access the API to send the emails'
+            option :mailmap, doc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
+                type: :string, default: DEFAULT_MAILMAP
             def announce_rc(rock_release_name)
                 template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
-                counter = 0
 
                 all_maintainers = compute_maintainers do |pkg|
                     # Only look at packages in rock. rock.core, rock.tutorials
@@ -299,6 +303,7 @@ module Rock
                     pkg.package_set.name == 'rock'
                 end
 
+                emails = Array.new
                 all_maintainers.each_value do |m|
                     from = RC_ANNOUNCEMENT_FROM
                     to = m.emails.map { |em| em.encode('UTF-8', undef: :replace) }
@@ -319,14 +324,38 @@ module Rock
                     external_stable_packages = m.stable_packages.keys.map(&:name) -
                         rock_stable_packages
 
-                    File.open("#{counter}.email", 'w') do |io|
-                        io.puts "From: #{from}"
-                        io.puts "To: #{to.join(", ")}"
-                        io.puts
-                        io.write template.result(binding).encode('UTF-8', undef: :replace)
+                    emails << Hash[
+                        from: from,
+                        to: to,
+                        subject: "Let's prepare the Rock release #{rock_release_name}",
+                        body: template.result(binding).encode('UTF-8', undef: :replace)
+                    ]
+                end
+
+                if !options[:sendgrid_user] || !options[:sendgrid_key]
+                    Rock.warn "No sendgrid user and key given, saving the emails on disk"
+                    emails.each_with_index do |m, i|
+                        puts "writing #{i}.txt"
+                        File.open("#{i}.txt", 'w') do |io|
+                            io.puts "From: #{m[:from]}"
+                            io.puts "To: #{m[:to].join(", ")}"
+                            io.puts "Subject: #{m[:subject]}"
+                            io.puts
+                            io.write m[:body]
+                        end
                     end
-                    puts "written #{counter}.email"
-                    counter += 1
+                else
+                    require 'sendgrid-ruby'
+                    client = SendGrid::Client.new(api_user: options[:sendgrid_user], api_key: options[:sendgrid_key])
+                    emails.each do |m|
+                        email = SendGrid::Mail.new do |em|
+                            em.from = m[:from]
+                            em.to = m[:to]
+                            em.subject = m[:subject]
+                            em.body = m[:body]
+                        end
+                        client.send(email)
+                    end
                 end
             end
 

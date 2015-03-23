@@ -1,5 +1,6 @@
 require 'thor'
 require 'autoproj'
+require 'rock'
 require 'rock/cli/release_admin'
 
 module Rock
