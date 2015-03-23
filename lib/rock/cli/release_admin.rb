@@ -453,6 +453,12 @@ module Rock
                 doc: 'the sendgrid key that should be used to access the API to send the emails'
             option :mailmap, doc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
                 type: :string, default: DEFAULT_MAILMAP
+            option :from, doc: "the email from field",
+                type: :string, default: RC_ANNOUNCEMENT_FROM
+            option :to, doc: "override the 'to' field, for testing purposes",
+                type: :string
+            option :limit, doc: "limit the number of emails sent (for testing purposes)",
+                type: :numeric
             def announce_rc(rock_release_name)
                 template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
 
@@ -475,22 +481,26 @@ module Rock
                 all_maintainers.each do |m|
                     packages = m.maintainers_of + m.authors_of + m.guessed_authors_of
                     package_count += packages.size
-                    from = RC_ANNOUNCEMENT_FROM
                     emails << Hash[
-                        from: from,
+                        from: options[:from],
                         to: m.emails,
                         subject: "Let's prepare the Rock release #{rock_release_name}",
                         body: template.result(binding).encode('UTF-8', undef: :replace)
                     ]
                 end
 
+                if options[:limit]
+                    emails = emails[0, [options[:limit], emails.size].min]
+                end
+
+                forced_to = options[:to]
                 if !options[:sendgrid_user] || !options[:sendgrid_key]
                     ReleaseAdmin.warn "No sendgrid user and key given, saving the emails on disk"
                     emails.each_with_index do |m, i|
                         ReleaseAdmin.info "writing #{i}.txt"
                         File.open("#{i}.txt", 'w') do |io|
                             io.puts "From: #{m[:from]}"
-                            io.puts "To: #{m[:to].join(", ")}"
+                            io.puts "To: #{forced_to || m[:to].join(", ")}"
                             io.puts "Subject: #{m[:subject]}"
                             io.puts
                             io.write m[:body]
@@ -502,7 +512,7 @@ module Rock
                     emails.each do |m|
                         email = SendGrid::Mail.new do |em|
                             em.from = m[:from]
-                            em.to = m[:to]
+                            em.to = Array(forced_to || m[:to])
                             em.subject = m[:subject]
                             em.body = m[:body]
                         end
