@@ -506,31 +506,6 @@ module Rock
                 end
             end
 
-            desc 'validate-maintainers', "checks that all packages have a maintainer"
-            def validate_maintainers
-                manifest = ensure_autoproj_initialized
-                packages = all_necessary_packages(manifest)
-                packages.each do |pkg|
-                    pkg = pkg.autobuild
-                    if !File.directory?(pkg.srcdir)
-                        Autoproj.warn "#{pkg.srcdir} not present on disk"
-                    else
-                        pkg_manifest = manifest.load_package_manifest(pkg.name)
-                        maintainers = pkg_manifest.each_maintainer.to_a
-                        if maintainers.empty?
-                            authors = pkg_manifest.each_author.to_a
-                            if authors.empty?
-                                pkg.error("%s has no maintainer and no author")
-                            else
-                                pkg.warn("%s has no maintainer but has #{authors.size} authors: #{authors.sort.join(", ")}")
-                            end
-                        else
-                            pkg.message("%s has #{maintainers.size} declared maintainers: #{maintainers.sort.join(", ")}")
-                        end
-                    end
-                end
-            end
-
             desc "create-rc", "create a release candidate environment"
             option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
             option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
