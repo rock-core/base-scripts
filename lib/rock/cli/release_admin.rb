@@ -453,12 +453,6 @@ module Rock
                 doc: 'the sendgrid key that should be used to access the API to send the emails'
             option :mailmap, doc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
                 type: :string, default: DEFAULT_MAILMAP
-            option :from, doc: "the email from field",
-                type: :string, default: RC_ANNOUNCEMENT_FROM
-            option :to, doc: "override the 'to' field, for testing purposes",
-                type: :string
-            option :limit, doc: "limit the number of emails sent (for testing purposes)",
-                type: :numeric
             def announce_rc(rock_release_name)
                 template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
 
@@ -514,7 +508,7 @@ module Rock
                             em.from = m[:from]
                             em.to = Array(forced_to || m[:to])
                             em.subject = m[:subject]
-                            em.body = m[:body]
+                            em.text = m[:body]
                         end
                         client.send(email)
                     end
