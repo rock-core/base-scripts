@@ -1,56 +1,74 @@
-You are receiving this email because we are preparing the release of <%= rock_release_name %>
+You are receiving this email because Rock's next release, <%= rock_release_name %>,
+is being prepared
 
-<% if !maintainers_of.empty? %>
+<% if !m.maintainers_of.empty? %>
 You are listed as maintainer for the following Rock packages:
-  <%= join_and_cut_at_70chars(maintainers_of.sort, 2) %>
-<% end %>
+  <%= join_and_cut_at_70chars(m.maintainers_of.sort, 2) %>
 
+<% end %>
+<% authors_of = (m.authors_of + m.guessed_authors_of).sort %>
 <% if !authors_of.empty? %>
-<%= if maintainers_of.empty? then "The" else "In addition, the" end %> following Rock packages do not have a maintainer, you
+<%= if m.maintainers_of.empty? then "The" else "In addition, the" end %> following Rock packages do not have a maintainer, you
 are therefore either receiving this email because you are listed as
 author in the package's manifest.xml, or because you are within the
 package's last 50 commits.
 
-Consider discussing among the package authors and/or interested parties to list
-at least one maintainer and add it using the <maintainer> tag in the
-manifest.xml file.
-  <%= join_and_cut_at_70chars(authors_of.sort, 2) %>
+Consider discussing among the package authors and/or interested
+parties to list at least one maintainer and add it using the
+<maintainer> tag in the manifest.xml file.
+  <%= join_and_cut_at_70chars(authors_of, 2) %>
+
+<% end %>
+<% # Don't show warnings about emails in the git history %>
+<% warnings = m.warnings.find_all { |pkg_name, _| !m.guessed_authors_of.include?(pkg_name) } %>
+<% if !warnings.empty? %>
+Also consider fixing the following problems in the package's
+manifest.xml:
+<% warnings.each do |pkg_name, w| %>
+  <%= pkg_name %>:
+<%     w.each do |line| %>
+    <%= line %>
+<%     end %>
 <% end %>
 
-<% if !rock_stable_packages.empty? %>
-<%= rock_stable_packages.size %> packages have already been released in previous Rock releases.
+<% end %>
+<% if !m.rock_stable_packages.empty? %>
+<%= m.rock_stable_packages.size %> packages have already been released in previous Rock releases.
 A rock-rc branch has been created in the package's repository based on
-the package's current 'stable' branch. If you update the rock-rc branch, the
-new commits will be released at the same time than Rock:
-  <%= join_and_cut_at_70chars(rock_stable_packages.sort, 2) %>
-<% end %>
+the package's current 'stable' branch. If you update the rock-rc
+branch, the new commits will be released at the same time than Rock:
+  <%= join_and_cut_at_70chars(m.rock_stable_packages.sort, 2) %>
 
-<% if !rock_master_packages.empty? %>
-<%= rock_master_packages.size %> packages are included in Rock but have not yet been released
+<% end %>
+<% if !m.rock_master_packages.empty? %>
+<%= m.rock_master_packages.size %> packages are included in Rock but have not yet been released
 in previous Rock releases. It would be great to see it released
 alongside <%= rock_release_name %> !
-  <%= join_and_cut_at_70chars(rock_master_packages.sort, 2) %>
+  <%= join_and_cut_at_70chars(m.rock_master_packages.sort, 2) %>
 
-To do so, you can creat ean issue or pull request on Rock's package set
+To do so, you can create an issue or pull request on Rock's package set
 repository, asking to add them to stable, or drop a line to
 rock-dev@dfki.de
    https://github.com/rock-core/rock-package_set/issues/new
 
-A rock-rc branch has already been created in their repository based on the
-package's current 'master' branch. If you do decide to include your package in
-<%= rock_release_name %>, barring any change on your side, this is the state that is
-going to be released.  You can also choose to update this branch to for instance
-avoid releasing some experimental code.
-<% end %>
+A rock-rc branch has already been created in their repository based on
+the package's current 'master' branch. If you do decide to include
+your package in <%= rock_release_name %>, barring any change on your side, this
+is the state that is going to be released.  You can also choose to
+update this branch to for instance avoid releasing some experimental
+code.
 
-<% if !external_master_packages.empty? || !external_stable_packages.empty? %>
-<%= external_master_packages.size %> master-only packages and <%= external_stable_packages %> already-released packages,
-for which you are listed as a Rock-side maintainer, are not managed within
-Rock's infrastructure (github organizations. You need to decide whether these
-should also be updated. If you choose to do so, create the corresponding pull
-request against the rock-rc branch on the Rock package set.
 <% end %>
+<% if !m.external_master_packages.empty? || !m.external_stable_packages.empty? %>
+<%= m.external_master_packages.size %> master-only packages and <%=
+m.external_stable_packages %> already-released packages,
+for which you are listed as a Rock-side maintainer, are not managed
+within Rock's infrastructure (github organizations). You need to
+decide whether these should also be updated. If you choose to do so,
+create the corresponding pull request against the rock-rc branch on
+the Rock package set.
 
+<% end %>
 Thank you for your contribution to Rock !
 
 The Rock Core team
