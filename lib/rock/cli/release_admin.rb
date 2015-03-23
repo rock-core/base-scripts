@@ -5,6 +5,8 @@ module Rock
     module CLI
         # Implementation of the rock-release admin subcommand
         class ReleaseAdmin < Thor
+            extend Logger::Root("rock-release admin", Logger::INFO)
+
             namespace 'rock-release:admin'
             class_option :verbose, type: :boolean, default: false
             def self.exit_on_failure?; true end
@@ -105,7 +107,7 @@ module Rock
 
                     status = pkg.importer.delta_between_tags(pkg, from_tag, to_tag)
                     if status.uncommitted_code
-                        Autoproj.warn "the #{pkg_name} package contains uncommitted modifications"
+                        ReleaseAdmin.warn "the #{pkg_name} package contains uncommitted modifications"
                     end
 
                     case status.status
@@ -464,12 +466,15 @@ module Rock
                 warnings.each do |pkg_name, w|
                     pkg = manifest.find_package(pkg_name)
                     w.each do |line|
-                        pkg.autobuild.warn "%s: #{line}"
+                        ReleaseAdmin.warn "#{pkg.name}: #{line}"
                     end
                 end
 
+                package_count = 0
                 emails = Array.new
                 all_maintainers.each do |m|
+                    packages = m.maintainers_of + m.authors_of + m.guessed_authors_of
+                    package_count += packages.size
                     from = RC_ANNOUNCEMENT_FROM
                     emails << Hash[
                         from: from,
@@ -480,9 +485,9 @@ module Rock
                 end
 
                 if !options[:sendgrid_user] || !options[:sendgrid_key]
-                    Rock.warn "No sendgrid user and key given, saving the emails on disk"
+                    ReleaseAdmin.warn "No sendgrid user and key given, saving the emails on disk"
                     emails.each_with_index do |m, i|
-                        puts "writing #{i}.txt"
+                        ReleaseAdmin.info "writing #{i}.txt"
                         File.open("#{i}.txt", 'w') do |io|
                             io.puts "From: #{m[:from]}"
                             io.puts "To: #{m[:to].join(", ")}"
@@ -504,6 +509,7 @@ module Rock
                         client.send(email)
                     end
                 end
+                ReleaseAdmin.info "notified maintainers of #{package_count} packages in #{emails.size} emails"
             end
 
             desc "create-rc", "create a release candidate environment"
