@@ -475,10 +475,23 @@ module Rock
                 all_maintainers.each do |m|
                     packages = m.maintainers_of + m.authors_of + m.guessed_authors_of
                     package_count += packages.size
+                    subject = "Let's prepare Rock #{rock_release_name}"
+                    subject_packages = Array.new
+                    remaining = 80 - subject.size - 10
+                    while !packages.empty? && (remaining > packages.first.size)
+                        subject_packages << packages.shift
+                        remaining -= subject_packages.last.size - 2
+                    end
+                    subject = "#{subject} (#{subject_packages.join(", ")}"
+                    if !packages.empty?
+                        subject = "#{subject} and #{packages.size} others)"
+                    else
+                        subject = "#{subject})"
+                    end
                     emails << Hash[
                         from: options[:from],
                         to: m.emails,
-                        subject: "Let's prepare the Rock release #{rock_release_name}",
+                        subject: subject,
                         body: template.result(binding).encode('UTF-8', undef: :replace)
                     ]
                 end
