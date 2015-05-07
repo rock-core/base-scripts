@@ -390,7 +390,7 @@ module Rock
 
             desc 'maintainers', 'create a CSV of the package maintainer information'
             option :mailmap, type: :string, default: DEFAULT_MAILMAP
-            option :csv, doc: 'display the result as CSV', type: :boolean, default: false
+            option :csv, desc: 'display the result as CSV', type: :boolean, default: false
             def maintainer_info
                 require 'csv'
 
@@ -448,10 +448,10 @@ module Rock
 
             desc 'announce-rc RELEASE_NAME', 'generates the emails that warn the package maintainers about the RC'
             option :sendgrid_user, type: :string,
-                doc: 'the sendgrid user that should be used to access the API to send the emails'
+                desc: 'the sendgrid user that should be used to access the API to send the emails'
             option :sendgrid_key, type: :string,
-                doc: 'the sendgrid key that should be used to access the API to send the emails'
-            option :mailmap, doc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
+                desc: 'the sendgrid key that should be used to access the API to send the emails'
+            option :mailmap, desc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
                 type: :string, default: DEFAULT_MAILMAP
             def announce_rc(rock_release_name)
                 template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
@@ -530,10 +530,9 @@ module Rock
             end
 
             desc "create-rc", "create a release candidate environment"
-            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
-            option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
-            option :notes, doc: "whether it should generate release notes", type: :boolean, default: true
-            option :update, type: :boolean, default: true, doc: "whether the RC branch should be updated even if it exists or not"
+            option :branch,  desc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :update, type: :boolean, default: true, desc: "whether the RC branch should be updated even if it exists or not"
             def create_rc
                 manifest = ensure_autoproj_initialized
                 # We checkout and branch all packages, not only the stable
@@ -603,7 +602,7 @@ module Rock
             end
 
             desc "delete-rc", "delete a release candidate environment created with create-rc"
-            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :branch, desc: "the release candidate branch", type: :string, default: 'rock-rc'
             def delete_rc
             end
 
@@ -617,8 +616,8 @@ module Rock
                 end
             end
 
-            desc "notes RELEASE_NAME LAST_RELEASE_NAME", "create a release notes file based on the package's changelogs"
-            def release_notes(release_name, last_release_name)
+            desc "notes RELEASE_NAME LAST_RELEASE_NAME", "create a release notes file based on the package's changelogs. RELEASE_NAME is the name that will be given to the new release and LAST_RELEASE_NAME the name of an existing release"
+            def notes(release_name, last_release_name)
                 manifest = ensure_autoproj_initialized
                 packages = all_necessary_packages(manifest)
 
@@ -656,10 +655,8 @@ module Rock
                 end
             end
 
-            desc "prepare RELEASE_NAME", "prepares a new release. It does only local modifications."
-            option :branch, doc: "the release branch", type: :string, default: 'stable'
-            option :exclude, doc: "the release branch", type: :array, default: []
-            option :notes, doc: "whether it should generate release notes", type: :boolean, default: nil
+            desc "prepare RELEASE_NAME", "Prepare a release: tagging packages and package sets and generating the release's version file. All modifications are local"
+            option :branch, desc: "the name of the stable branch", type: :string, default: 'stable'
             def prepare(release_name)
                 manifest = ensure_autoproj_initialized
                 packages = all_necessary_packages(manifest)
@@ -695,6 +692,7 @@ module Rock
                     raise "failed to prepare #{failed_packages.size} packages"
                 end
 
+                Autoproj.message "Creating version file, and saving it in #{version_path}"
                 ops = Autoproj::Ops::Snapshot.new(manifest, keep_going: false)
                 versions = ops.snapshot_package_sets +
                     ops.snapshot_packages(packages.map { |pkg| pkg.autobuild.name })
@@ -705,7 +703,13 @@ module Rock
                 File.open(version_path, 'w') do |io|
                     YAML.dump(versions, io)
                 end
-                Autoproj.message "saved versions in #{version_path}"
+                Autoproj.message "Done"
+                Autoproj.message "Left to do:"
+                Autoproj.message "  - create a release note file in autoproj/#{Release::RELEASE_NOTES}. A template file, created based on the package's changelog, can be created with"
+                Autoproj.message "    rock-release admin notes #{release_name} LAST_RELEASE_NAME"
+                Autoproj.message "  - commit the build configuration and tag it with the release name"
+                Autoproj.message "  - push everything"
+                Autoproj.message "  - delete the RC"
             end
         end
     end
