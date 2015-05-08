@@ -8,7 +8,7 @@ module Rock
             extend Logger::Root("rock-release admin", Logger::INFO)
 
             namespace 'rock-release:admin'
-            class_option :verbose, type: :boolean, default: false
+            class_option :verbose, type: :boolean, default: true
             def self.exit_on_failure?; true end
 
             attr_reader :config_dir
@@ -18,13 +18,28 @@ module Rock
                 /github.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/orocos-toolchain\//]
 
+            def ensure_autoproj_initialized
+                if !Autoproj.manifest
+                    if options[:verbose]
+                        Autoproj::CmdLine.initialize_and_load([])
+                    else
+                        Autoproj.silent do
+                            Autoproj::CmdLine.initialize_and_load([])
+                        end
+                    end
+                end
+                Autoproj.manifest
+            end
+
             def initialize(*args)
                 super
                 Autoproj.load_config
                 Autoproj::CmdLine.initialize_root_directory
                 @config_dir = Autoproj.config_dir
-                @manifest = Autoproj.manifest
+                @manifest = ensure_autoproj_initialized
             end
+
+            attr_reader :manifest
 
             no_commands do
                 def invoke_command(*args, &block)
@@ -47,18 +62,6 @@ module Rock
                     end
                 end
 
-                def ensure_autoproj_initialized
-                    if !Autoproj.manifest
-                        if options[:verbose]
-                            Autoproj::CmdLine.initialize_and_load([])
-                        else
-                            Autoproj.silent do
-                                Autoproj::CmdLine.initialize_and_load([])
-                            end
-                        end
-                    end
-                    Autoproj.manifest
-                end
 
                 def rock_package?(package)
                     ROCK_VCS_LOCATIONS.any? { |matcher| matcher === package.vcs.url }
@@ -271,7 +274,6 @@ module Rock
                     else
                         mailmap = Hash.new
                     end
-                    manifest = ensure_autoproj_initialized
                     master_packages = all_necessary_packages(manifest, 'master')
                     if filter
                         master_packages = master_packages.find_all(&filter)
@@ -325,6 +327,17 @@ module Rock
                         result << line.join(", ")
                     end
                     result.join("\n" + " " * indentation)
+                end
+
+                #Checks out all needed packages for a release on the given branch
+                def check_out_missing_packages(branch)
+                    packages = all_necessary_packages(manifest, branch)
+                    Autoproj.message "Checking out missing packages"
+                    missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
+                    missing_packages.each_with_index do |pkg, i|
+                        Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
+                        pkg.autobuild.import(checkout_only: true)
+                    end
                 end
             end
 
@@ -400,7 +413,6 @@ module Rock
                     mailmap = Hash.new
                 end
 
-                manifest = ensure_autoproj_initialized
                 packages  = all_necessary_packages(manifest, 'master')
                 packages += all_necessary_packages(manifest, 'stable')
                 packages = packages.uniq(&:name).sort_by(&:name)
@@ -462,7 +474,6 @@ module Rock
                     pkg.package_set.name == 'rock'
                 end
 
-                manifest = ensure_autoproj_initialized
                 warnings.each do |pkg_name, w|
                     pkg = manifest.find_package(pkg_name)
                     w.each do |line|
@@ -534,18 +545,12 @@ module Rock
             option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
             option :update, type: :boolean, default: true, desc: "whether the RC branch should be updated even if it exists or not"
             def create_rc
-                manifest = ensure_autoproj_initialized
                 # We checkout and branch all packages, not only the stable
                 # ones, to ease release of new packages. This does not mean
                 # that we're going to release all of them, of course !
                 packages = all_necessary_packages(manifest, 'master')
 
-                Autoproj.message "Checking out missing packages"
-                missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
-                missing_packages.each_with_index do |pkg, i|
-                    Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
-                    pkg.autobuild.import(checkout_only: true)
-                end
+                check_out_missing_packages('master')
 
                 excluded_by_user = options[:exclude].flat_map do |entry|
                     entry.split(',')
@@ -585,7 +590,61 @@ module Rock
                     end
                     versions << Hash[pkg.name => Hash['branch' => branch]]
                 end
+
+                #Finally update the release description file
+                update_rc
+            end
+
+            desc "update-rc", "updated the current rc-version file based on the current setup"
+            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :notes, doc: "whether it should generate release notes", type: :boolean, default: true
+            def update_rc
+                branch = options[:branch]
+
+                # We checkout and branch all packages, not only the stable
+                # ones, to ease release of new packages. This does not mean
+                # that we're going to release all of them, of course !
+                packages = all_necessary_packages(manifest, 'master')
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+
+                check_out_missing_packages('master')
+
+                # Deal with the packages that are managed within Rock
+                packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
                 ops = Autoproj::Ops::Snapshot.new(manifest)
+                versions = Array.new
+
+                Autoproj.message "Query the package sets RC branch"
+                package_sets = manifest.each_remote_package_set.to_a
+                package_sets.each_with_index do |pkg_set, i|
+                    Autoproj.message "  [#{i}/#{package_sets.size}] #{pkg_set.repository_id}"
+                    pkg = pkg_set.create_autobuild_package
+                    if !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        raise "The package set #{pkg_set.name} hasn't the requested branch #{branch}, maybe create the rc-first"
+                    end
+                    versions << Hash["pkg_set:#{pkg_set.repository_id}" => Hash['branch' => branch]]
+                end
+
+                Autoproj.message "Query the packages RC branch"
+                # Deal with the packages that are managed within Rock
+                packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+                packages_to_branch_out.each_with_index do |pkg, i|
+                    Autoproj.message "  [#{i + 1}/#{packages_to_branch_out.size}] #{pkg.name}"
+                    pkg = pkg.autobuild
+                    if !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        raise "The package #{pkg.name}  hasn't the requested branch #{branch}, maybe create the rc-first"
+                    end
+                    versions << Hash[pkg.name => Hash['branch' => branch]]
+                end
                 versions += ops.snapshot_packages(packages_to_snapshot.map { |pkg| pkg.autobuild.name })
 
                 vcs = Autoproj::VCSDefinition.from_raw(Release::ROCK_RELEASE_INFO)
@@ -601,6 +660,7 @@ module Rock
                 buildconf.importer.run_git_bare(buildconf, 'push', '-f', '--tags', buildconf.importer.push_to)
             end
 
+
             desc "delete-rc", "delete a release candidate environment created with create-rc"
             option :branch, desc: "the release candidate branch", type: :string, default: 'rock-rc'
             def delete_rc
@@ -609,7 +669,6 @@ module Rock
             desc "checkout", "checkout all packages that are included in a given flavor (stable by default). This is done by 'prepare'"
             option 'flavor', type: :string, default: :stable
             def checkout
-                manifest = ensure_autoproj_initialized
                 Autobuild.do_update = true
                 all_necessary_packages(manifest, options[:flavor].to_s).each do |pkg|
                     pkg.autobuild.import(checkout_only: false, only_local: true)
@@ -618,7 +677,6 @@ module Rock
 
             desc "notes RELEASE_NAME LAST_RELEASE_NAME", "create a release notes file based on the package's changelogs. RELEASE_NAME is the name that will be given to the new release and LAST_RELEASE_NAME the name of an existing release"
             def notes(release_name, last_release_name)
-                manifest = ensure_autoproj_initialized
                 packages = all_necessary_packages(manifest)
 
                 ops = Release.new
@@ -658,7 +716,6 @@ module Rock
             desc "prepare RELEASE_NAME", "Prepare a release: tagging packages and package sets and generating the release's version file. All modifications are local"
             option :branch, desc: "the name of the stable branch", type: :string, default: 'stable'
             def prepare(release_name)
-                manifest = ensure_autoproj_initialized
                 packages = all_necessary_packages(manifest)
 
                 Autoproj.message "Checking out missing packages"
