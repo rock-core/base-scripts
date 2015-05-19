@@ -660,18 +660,14 @@ module Rock
                 bootstrap_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, "bootstrap.sh", "bootstrap.sh for this release", notes_commit) do |io|
                     File.open(File.join(buildconf.srcdir,"bootstrap.sh")).readlines.each do |line|
                         if line.include? "BOOTSTRAP_ARGS="
-                            io.puts "BOOTSTRAP_ARGS=tag=rock-rc"
+                            io.puts "BOOTSTRAP_ARGS=branch=rock-rc"
                         else
                             io.puts line
                         end
                     end
                 end
-                buildconf.importer.run_git_bare(buildconf, 'tag', '-f', 'rock-rc', bootstrap_commit)
-
-                buildconf.importer.run_git_bare(buildconf, 'push', '-f', '--tags', buildconf.importer.push_to)
-            end
-
-
+                buildconf.importer.run_git_bare(buildconf, 'branch', '-f', 'rock-rc', bootstrap_commit)
+                buildconf.importer.run_git_bare(buildconf, 'push', '-f', buildconf.importer.push_to)
             end
 
 
