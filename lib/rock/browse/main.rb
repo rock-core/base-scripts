@@ -64,7 +64,7 @@ class Main < Qt::Widget
         end
 
         view.connect(SIGNAL('itemClicked(QTreeWidgetItem*,int)')) do |item, col|
-            if item
+            if item and not item.parent.nil?
                 render_item(item)
             end
         end
