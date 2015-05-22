@@ -18,6 +18,16 @@ module Rock
                 /github.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/orocos-toolchain\//]
 
+
+
+            def initialize(*args)
+                super
+                Autoproj.load_config
+                Autoproj::CmdLine.initialize_root_directory
+                @config_dir = Autoproj.config_dir
+                @manifest = ensure_autoproj_initialized
+            end
+            
             def ensure_autoproj_initialized
                 if !Autoproj.manifest
                     if options[:verbose]
@@ -29,14 +39,6 @@ module Rock
                     end
                 end
                 Autoproj.manifest
-            end
-
-            def initialize(*args)
-                super
-                Autoproj.load_config
-                Autoproj::CmdLine.initialize_root_directory
-                @config_dir = Autoproj.config_dir
-                @manifest = ensure_autoproj_initialized
             end
 
             attr_reader :manifest
@@ -68,8 +70,7 @@ module Rock
                 end
 
                 def tag_rock_packages(packages, release_name, options = Hash.new)
-                    options = Kernel.validate_options options,
-                        branch: 'stable'
+                    options = Kernel.validate_options options, branch: 'stable'
                     branch = options[:branch]
                     packages.find_all do |pkg|
                         importer = pkg.importer
@@ -674,6 +675,33 @@ module Rock
             desc "delete-rc", "delete a release candidate environment created with create-rc"
             option :branch, desc: "the release candidate branch", type: :string, default: 'rock-rc'
             def delete_rc
+                packages = all_necessary_packages(manifest,'master')
+                branch = options['branch']
+                 
+                packages.each do |pkg|
+                    pkg.autobuild.import(checkout_only: true)
+                end
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+                
+                # Deal with the packages that are managed within Rock
+                packages_to_handle, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
+                packages_to_handle.each do |pkg|
+                    pkg = pkg.autobuild
+                    importer = pkg.importer
+                    if importer.nil?
+                        Autoproj.error "No importer for #{pkg.name}"
+                        return -1
+                    end
+                    if pkg.name == "simulation/imumodel"
+                        importer.run_git_bare(pkg,"push", "autobuild", ":#{branch}") 
+                    end
+                end
             end
 
             desc "checkout", "checkout all packages that are included in a given flavor (stable by default). This is done by 'prepare'"
@@ -723,8 +751,73 @@ module Rock
                 end
             end
 
+
+            desc "create-pull-requests SOURCE TARGET", "this is needed during a release to create pull-requests for the rc back to master"
+            option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :local, desc: "True if remote gits should not be queried"
+            def create_pull_requests(source, target)
+                if source.nil? || target.nil?
+                    Autoproj.error "You must specify a branch"
+                    exit -1
+                end
+
+                local = options[:local]
+                packages = all_necessary_packages(manifest,'master')
+                
+                packages.each do |pkg|
+                    pkg.autobuild.import(checkout_only: true)
+                end
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+                
+                # Deal with the packages that are managed within Rock
+                packages_to_handle, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
+                packages_to_handle.each do |pkg|
+                    pkg = pkg.autobuild
+                    importer = pkg.importer
+                    if importer.nil?
+                        Autoproj.error "No importer for #{pkg.name}"
+                        return -1
+                    end
+#                    importer.run_git_bare(pkg,'remote','update')
+#                    old_branch = importer.current_branch(pkg)
+#                    if old_branch != "refs/heads/#{target}" # we need to switch to the target branch
+#                        pkg.importer.branch = target
+#                        Autoproj.message "Switch to branch #{target} for package #{pkg.name}"
+#                    end
+
+#                    pkg.update(:only_local => true) #Can be done locally because update was done before
+                    needs_merge = !importer.run_git_bare(pkg,"branch", "-a", "--contains","remotes/autobuild/#{target}").any?{|e| e.strip == "remotes/autobuild/#{source}"} 
+                    if needs_merge
+                        Autoproj.message "Package #{pkg.name} needs a merge creating pull-request"
+                        if pkg.name == "simulation/imumodel"
+                            Dir.chdir(pkg.srcdir) do |dir|
+                                call = "hub pull-request -m 'Automatic rock-release PR: integrate rc-patches in master' -b #{target} -h #{source}"
+                                #binding.pry
+                                erg = system(call)
+                                if(!erg)
+                                    Autoproj.error "Could not run hub pull request, result is #{$?}"
+                                    return -1
+                                end
+                            end
+                        end
+                    end
+
+#                    if old_branch != importer.current_branch(pkg)
+#                        pkg.importer.branch = old_branch 
+#                        pkg.update(:only_local => true) #Can be done locally because update was done before
+#                    end
+                end
+            end
+
             desc "prepare RELEASE_NAME", "Prepare a release: tagging packages and package sets and generating the release's version file. All modifications are local"
-            option :branch, desc: "the name of the stable branch", type: :string, default: 'stable'
+            option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :branch, desc: "the name of the stable branch", type: :string, default: 'rock-rc'
             def prepare(release_name)
                 packages = all_necessary_packages(manifest)
 
@@ -741,7 +834,7 @@ module Rock
                 failed_package_sets = tag_rock_packages(
                     manifest.each_remote_package_set.map(&:create_autobuild_package),
                     release_name,
-                    branch: nil)
+                    branch: options[:branch])
                 if !failed_package_sets.empty?
                     raise "failed to prepare #{failed_package_sets.size} package sets"
                 end
