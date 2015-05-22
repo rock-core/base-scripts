@@ -8,7 +8,7 @@ module Rock
             extend Logger::Root("rock-release admin", Logger::INFO)
 
             namespace 'rock-release:admin'
-            class_option :verbose, type: :boolean, default: false
+            class_option :verbose, type: :boolean, default: true
             def self.exit_on_failure?; true end
 
             attr_reader :config_dir
@@ -18,13 +18,30 @@ module Rock
                 /github.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/orocos-toolchain\//]
 
+
+
             def initialize(*args)
                 super
                 Autoproj.load_config
                 Autoproj::CmdLine.initialize_root_directory
                 @config_dir = Autoproj.config_dir
-                @manifest = Autoproj.manifest
+                @manifest = ensure_autoproj_initialized
             end
+            
+            def ensure_autoproj_initialized
+                if !Autoproj.manifest
+                    if options[:verbose]
+                        Autoproj::CmdLine.initialize_and_load([])
+                    else
+                        Autoproj.silent do
+                            Autoproj::CmdLine.initialize_and_load([])
+                        end
+                    end
+                end
+                Autoproj.manifest
+            end
+
+            attr_reader :manifest
 
             no_commands do
                 def invoke_command(*args, &block)
@@ -47,26 +64,13 @@ module Rock
                     end
                 end
 
-                def ensure_autoproj_initialized
-                    if !Autoproj.manifest
-                        if options[:verbose]
-                            Autoproj::CmdLine.initialize_and_load([])
-                        else
-                            Autoproj.silent do
-                                Autoproj::CmdLine.initialize_and_load([])
-                            end
-                        end
-                    end
-                    Autoproj.manifest
-                end
 
                 def rock_package?(package)
                     ROCK_VCS_LOCATIONS.any? { |matcher| matcher === package.vcs.url }
                 end
 
                 def tag_rock_packages(packages, release_name, options = Hash.new)
-                    options = Kernel.validate_options options,
-                        branch: 'stable'
+                    options = Kernel.validate_options options, branch: 'stable'
                     branch = options[:branch]
                     packages.find_all do |pkg|
                         importer = pkg.importer
@@ -271,7 +275,6 @@ module Rock
                     else
                         mailmap = Hash.new
                     end
-                    manifest = ensure_autoproj_initialized
                     master_packages = all_necessary_packages(manifest, 'master')
                     if filter
                         master_packages = master_packages.find_all(&filter)
@@ -325,6 +328,17 @@ module Rock
                         result << line.join(", ")
                     end
                     result.join("\n" + " " * indentation)
+                end
+
+                #Checks out all needed packages for a release on the given branch
+                def check_out_missing_packages(branch)
+                    packages = all_necessary_packages(manifest, branch)
+                    Autoproj.message "Checking out missing packages"
+                    missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
+                    missing_packages.each_with_index do |pkg, i|
+                        Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
+                        pkg.autobuild.import(checkout_only: true)
+                    end
                 end
             end
 
@@ -390,7 +404,7 @@ module Rock
 
             desc 'maintainers', 'create a CSV of the package maintainer information'
             option :mailmap, type: :string, default: DEFAULT_MAILMAP
-            option :csv, doc: 'display the result as CSV', type: :boolean, default: false
+            option :csv, desc: 'display the result as CSV', type: :boolean, default: false
             def maintainer_info
                 require 'csv'
 
@@ -400,7 +414,6 @@ module Rock
                     mailmap = Hash.new
                 end
 
-                manifest = ensure_autoproj_initialized
                 packages  = all_necessary_packages(manifest, 'master')
                 packages += all_necessary_packages(manifest, 'stable')
                 packages = packages.uniq(&:name).sort_by(&:name)
@@ -448,10 +461,10 @@ module Rock
 
             desc 'announce-rc RELEASE_NAME', 'generates the emails that warn the package maintainers about the RC'
             option :sendgrid_user, type: :string,
-                doc: 'the sendgrid user that should be used to access the API to send the emails'
+                desc: 'the sendgrid user that should be used to access the API to send the emails'
             option :sendgrid_key, type: :string,
-                doc: 'the sendgrid key that should be used to access the API to send the emails'
-            option :mailmap, doc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
+                desc: 'the sendgrid key that should be used to access the API to send the emails'
+            option :mailmap, desc: "path to a YAML file that maps user/emails as found by rock-release to the actual emails that should be used, see #{DEFAULT_MAILMAP} for an example",
                 type: :string, default: DEFAULT_MAILMAP
             def announce_rc(rock_release_name)
                 template = ERB.new(File.read(RC_ANNOUNCEMENT_TEMPLATE_PATH), nil, "<>")
@@ -462,7 +475,6 @@ module Rock
                     pkg.package_set.name == 'rock'
                 end
 
-                manifest = ensure_autoproj_initialized
                 warnings.each do |pkg_name, w|
                     pkg = manifest.find_package(pkg_name)
                     w.each do |line|
@@ -530,23 +542,16 @@ module Rock
             end
 
             desc "create-rc", "create a release candidate environment"
-            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
-            option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
-            option :notes, doc: "whether it should generate release notes", type: :boolean, default: true
-            option :update, type: :boolean, default: true, doc: "whether the RC branch should be updated even if it exists or not"
+            option :branch,  desc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :update, type: :boolean, default: true, desc: "whether the RC branch should be updated even if it exists or not"
             def create_rc
-                manifest = ensure_autoproj_initialized
                 # We checkout and branch all packages, not only the stable
                 # ones, to ease release of new packages. This does not mean
                 # that we're going to release all of them, of course !
                 packages = all_necessary_packages(manifest, 'master')
 
-                Autoproj.message "Checking out missing packages"
-                missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
-                missing_packages.each_with_index do |pkg, i|
-                    Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
-                    pkg.autobuild.import(checkout_only: true)
-                end
+                check_out_missing_packages('master')
 
                 excluded_by_user = options[:exclude].flat_map do |entry|
                     entry.split(',')
@@ -586,7 +591,61 @@ module Rock
                     end
                     versions << Hash[pkg.name => Hash['branch' => branch]]
                 end
+
+                #Finally update the release description file
+                update_rc
+            end
+
+            desc "update-rc", "updated the current rc-version file based on the current setup"
+            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :notes, doc: "whether it should generate release notes", type: :boolean, default: true
+            def update_rc
+                branch = options[:branch]
+
+                # We checkout and branch all packages, not only the stable
+                # ones, to ease release of new packages. This does not mean
+                # that we're going to release all of them, of course !
+                packages = all_necessary_packages(manifest, 'master')
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+
+                check_out_missing_packages('master')
+
+                # Deal with the packages that are managed within Rock
+                packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
                 ops = Autoproj::Ops::Snapshot.new(manifest)
+                versions = Array.new
+
+                Autoproj.message "Query the package sets RC branch"
+                package_sets = manifest.each_remote_package_set.to_a
+                package_sets.each_with_index do |pkg_set, i|
+                    Autoproj.message "  [#{i}/#{package_sets.size}] #{pkg_set.repository_id}"
+                    pkg = pkg_set.create_autobuild_package
+                    if !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        raise "The package set #{pkg_set.name} hasn't the requested branch #{branch}, maybe create the rc-first"
+                    end
+                    versions << Hash["pkg_set:#{pkg_set.repository_id}" => Hash['branch' => branch]]
+                end
+
+                Autoproj.message "Query the packages RC branch"
+                # Deal with the packages that are managed within Rock
+                packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+                packages_to_branch_out.each_with_index do |pkg, i|
+                    Autoproj.message "  [#{i + 1}/#{packages_to_branch_out.size}] #{pkg.name}"
+                    pkg = pkg.autobuild
+                    if !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        raise "The package #{pkg.name}  hasn't the requested branch #{branch}, maybe create the rc-first"
+                    end
+                    versions << Hash[pkg.name => Hash['branch' => branch]]
+                end
                 versions += ops.snapshot_packages(packages_to_snapshot.map { |pkg| pkg.autobuild.name })
 
                 vcs = Autoproj::VCSDefinition.from_raw(Release::ROCK_RELEASE_INFO)
@@ -598,28 +657,64 @@ module Rock
                 notes_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, Release::RELEASE_NOTES, "release notes file to please rock-release", version_commit) do |io|
                     io.puts "This is an empty file meant to allow rock-release to see rock-rc as a release"
                 end
-                buildconf.importer.run_git_bare(buildconf, 'tag', '-f', 'rock-rc', notes_commit)
-                buildconf.importer.run_git_bare(buildconf, 'push', '-f', '--tags', buildconf.importer.push_to)
+
+                bootstrap_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, "bootstrap.sh", "bootstrap.sh for this release", notes_commit) do |io|
+                    File.open(File.join(buildconf.srcdir,"bootstrap.sh")).readlines.each do |line|
+                        if line.include? "BOOTSTRAP_ARGS="
+                            io.puts "BOOTSTRAP_ARGS=branch=rock-rc"
+                        else
+                            io.puts line
+                        end
+                    end
+                end
+                buildconf.importer.run_git_bare(buildconf, 'branch', '-f', 'rock-rc', bootstrap_commit)
+                buildconf.importer.run_git_bare(buildconf, 'push', '-f', buildconf.importer.push_to)
             end
 
+
             desc "delete-rc", "delete a release candidate environment created with create-rc"
-            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :branch, desc: "the release candidate branch", type: :string, default: 'rock-rc'
             def delete_rc
+                packages = all_necessary_packages(manifest,'master')
+                branch = options['branch']
+                 
+                packages.each do |pkg|
+                    pkg.autobuild.import(checkout_only: true)
+                end
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+                
+                # Deal with the packages that are managed within Rock
+                packages_to_handle, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
+                packages_to_handle.each do |pkg|
+                    pkg = pkg.autobuild
+                    importer = pkg.importer
+                    if importer.nil?
+                        Autoproj.error "No importer for #{pkg.name}"
+                        return -1
+                    end
+                    if pkg.name == "simulation/imumodel"
+                        importer.run_git_bare(pkg,"push", "autobuild", ":#{branch}") 
+                    end
+                end
             end
 
             desc "checkout", "checkout all packages that are included in a given flavor (stable by default). This is done by 'prepare'"
             option 'flavor', type: :string, default: :stable
             def checkout
-                manifest = ensure_autoproj_initialized
                 Autobuild.do_update = true
                 all_necessary_packages(manifest, options[:flavor].to_s).each do |pkg|
                     pkg.autobuild.import(checkout_only: false, only_local: true)
                 end
             end
 
-            desc "notes RELEASE_NAME LAST_RELEASE_NAME", "create a release notes file based on the package's changelogs"
-            def release_notes(release_name, last_release_name)
-                manifest = ensure_autoproj_initialized
+            desc "notes RELEASE_NAME LAST_RELEASE_NAME", "create a release notes file based on the package's changelogs. RELEASE_NAME is the name that will be given to the new release and LAST_RELEASE_NAME the name of an existing release"
+            def notes(release_name, last_release_name)
                 packages = all_necessary_packages(manifest)
 
                 ops = Release.new
@@ -656,12 +751,74 @@ module Rock
                 end
             end
 
-            desc "prepare RELEASE_NAME", "prepares a new release. It does only local modifications."
-            option :branch, doc: "the release branch", type: :string, default: 'stable'
-            option :exclude, doc: "the release branch", type: :array, default: []
-            option :notes, doc: "whether it should generate release notes", type: :boolean, default: nil
+
+            desc "create-pull-requests SOURCE TARGET", "this is needed during a release to create pull-requests for the rc back to master"
+            option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :local, desc: "True if remote gits should not be queried"
+            def create_pull_requests(source, target)
+                if source.nil? || target.nil?
+                    Autoproj.error "You must specify a branch"
+                    exit -1
+                end
+
+                local = options[:local]
+                packages = all_necessary_packages(manifest,'master')
+                
+                packages.each do |pkg|
+                    pkg.autobuild.import(checkout_only: true)
+                end
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+                
+                # Deal with the packages that are managed within Rock
+                packages_to_handle, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
+                packages_to_handle.each do |pkg|
+                    pkg = pkg.autobuild
+                    importer = pkg.importer
+                    if importer.nil?
+                        Autoproj.error "No importer for #{pkg.name}"
+                        return -1
+                    end
+#                    importer.run_git_bare(pkg,'remote','update')
+#                    old_branch = importer.current_branch(pkg)
+#                    if old_branch != "refs/heads/#{target}" # we need to switch to the target branch
+#                        pkg.importer.branch = target
+#                        Autoproj.message "Switch to branch #{target} for package #{pkg.name}"
+#                    end
+
+#                    pkg.update(:only_local => true) #Can be done locally because update was done before
+                    needs_merge = !importer.run_git_bare(pkg,"branch", "-a", "--contains","remotes/autobuild/#{target}").any?{|e| e.strip == "remotes/autobuild/#{source}"} 
+                    if needs_merge
+                        Autoproj.message "Package #{pkg.name} needs a merge creating pull-request"
+                        if pkg.name == "simulation/imumodel"
+                            Dir.chdir(pkg.srcdir) do |dir|
+                                call = "hub pull-request -m 'Automatic rock-release PR: integrate rc-patches in master' -b #{target} -h #{source}"
+                                #binding.pry
+                                erg = system(call)
+                                if(!erg)
+                                    Autoproj.error "Could not run hub pull request, result is #{$?}"
+                                    return -1
+                                end
+                            end
+                        end
+                    end
+
+#                    if old_branch != importer.current_branch(pkg)
+#                        pkg.importer.branch = old_branch 
+#                        pkg.update(:only_local => true) #Can be done locally because update was done before
+#                    end
+                end
+            end
+
+            desc "prepare RELEASE_NAME", "Prepare a release: tagging packages and package sets and generating the release's version file. All modifications are local"
+            option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :branch, desc: "the name of the stable branch", type: :string, default: 'rock-rc'
             def prepare(release_name)
-                manifest = ensure_autoproj_initialized
                 packages = all_necessary_packages(manifest)
 
                 Autoproj.message "Checking out missing packages"
@@ -677,7 +834,7 @@ module Rock
                 failed_package_sets = tag_rock_packages(
                     manifest.each_remote_package_set.map(&:create_autobuild_package),
                     release_name,
-                    branch: nil)
+                    branch: options[:branch])
                 if !failed_package_sets.empty?
                     raise "failed to prepare #{failed_package_sets.size} package sets"
                 end
@@ -695,6 +852,7 @@ module Rock
                     raise "failed to prepare #{failed_packages.size} packages"
                 end
 
+                Autoproj.message "Creating version file, and saving it in #{version_path}"
                 ops = Autoproj::Ops::Snapshot.new(manifest, keep_going: false)
                 versions = ops.snapshot_package_sets +
                     ops.snapshot_packages(packages.map { |pkg| pkg.autobuild.name })
@@ -705,7 +863,13 @@ module Rock
                 File.open(version_path, 'w') do |io|
                     YAML.dump(versions, io)
                 end
-                Autoproj.message "saved versions in #{version_path}"
+                Autoproj.message "Done"
+                Autoproj.message "Left to do:"
+                Autoproj.message "  - create a release note file in autoproj/#{Release::RELEASE_NOTES}. A template file, created based on the package's changelog, can be created with"
+                Autoproj.message "    rock-release admin notes #{release_name} LAST_RELEASE_NAME"
+                Autoproj.message "  - commit the build configuration and tag it with the release name"
+                Autoproj.message "  - push everything"
+                Autoproj.message "  - delete the RC"
             end
         end
     end
