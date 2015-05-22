@@ -38,7 +38,7 @@ module Rock
             # #load_config is called.
             #
             # Configuration in bundles
-            attr_reader :config
+            attr_accessor :config
             # Returns true if this bundle can be found through the
             # ROCK_BUNDLE_PATH or if it must be referred to through its full
             # path
@@ -234,7 +234,8 @@ module Rock
             queue = [root_bundle]
             while !queue.empty?
                 root = queue.shift
-                next if result.include?(root) || queue.include?(root)
+                result.delete(root)
+                next if queue.include?(root)
 
                 result << root
                 root.each_dependency do |bundle_name|
