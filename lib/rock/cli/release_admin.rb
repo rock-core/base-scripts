@@ -337,6 +337,17 @@ module Rock
                     end
                     result.join("\n" + " " * indentation)
                 end
+
+                #Checks out all needed packages for a release on the given branch
+                def check_out_missing_packages(branch)
+                    packages = all_necessary_packages(manifest, branch)
+                    Autoproj.message "Checking out missing packages"
+                    missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
+                    missing_packages.each_with_index do |pkg, i|
+                        Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
+                        pkg.autobuild.import(checkout_only: true)
+                    end
+                end
             end
 
             # Information about groups of authors/maintainers and the
@@ -548,12 +559,7 @@ module Rock
                 # that we're going to release all of them, of course !
                 packages = all_necessary_packages(manifest, 'master')
 
-                Autoproj.message "Checking out missing packages"
-                missing_packages = packages.find_all { |pkg| !File.directory?(pkg.autobuild.srcdir) }
-                missing_packages.each_with_index do |pkg, i|
-                    Autoproj.message "  [#{i + 1}/#{missing_packages.size}] #{pkg.name}"
-                    pkg.autobuild.import(checkout_only: true)
-                end
+                check_out_missing_packages('master')
 
                 excluded_by_user = options[:exclude].flat_map do |entry|
                     entry.split(',')
