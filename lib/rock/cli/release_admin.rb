@@ -105,11 +105,22 @@ module Rock
                         return
                     end
 
-
-                    status = pkg.importer.delta_between_tags(pkg, from_tag, to_tag)
+                    begin
+                        status = pkg.importer.delta_between_tags(pkg, from_tag, to_tag)
                     if status.uncommitted_code
                         ReleaseAdmin.warn "the #{pkg_name} package contains uncommitted modifications"
                     end
+                    rescue ArgumentError => e
+                        ReleaseAdmin.warn "the #{pkg_name} should not get tagged here, not creating release information"
+                        return result
+                    rescue NoMethodError => e
+                        ReleaseAdmin.warn "the #{pkg_name} does not support release info creation currently"
+                        return result
+                    rescue Autobuild::SubcommandFailed => e
+                        ReleaseAdmin.warn "Not creating release notes for unknown reasons for: #{pkg_name} (maybe it does not have tags at all?)"
+                        return result
+                    end
+
 
                     case status.status
                     when Autobuild::Importer::Status::UP_TO_DATE
