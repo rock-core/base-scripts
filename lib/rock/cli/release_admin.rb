@@ -599,7 +599,61 @@ module Rock
                     end
                     versions << Hash[pkg.name => Hash['branch' => branch]]
                 end
+
+                #Finally update the release description file
+                update_rc
+            end
+
+            desc "update-rc", "updated the current rc-version file based on the current setup"
+            option :branch, doc: "the release candidate branch", type: :string, default: 'rock-rc'
+            option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
+            option :notes, doc: "whether it should generate release notes", type: :boolean, default: true
+            def update_rc
+                branch = options[:branch]
+
+                # We checkout and branch all packages, not only the stable
+                # ones, to ease release of new packages. This does not mean
+                # that we're going to release all of them, of course !
+                packages = all_necessary_packages(manifest, 'master')
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+
+                check_out_missing_packages('master')
+
+                # Deal with the packages that are managed within Rock
+                packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
                 ops = Autoproj::Ops::Snapshot.new(manifest)
+                versions = Array.new
+
+                Autoproj.message "Query the package sets RC branch"
+                package_sets = manifest.each_remote_package_set.to_a
+                package_sets.each_with_index do |pkg_set, i|
+                    Autoproj.message "  [#{i}/#{package_sets.size}] #{pkg_set.repository_id}"
+                    pkg = pkg_set.create_autobuild_package
+                    if !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        raise "The package set #{pkg_set.name} hasn't the requested branch #{branch}, maybe create the rc-first"
+                    end
+                    versions << Hash["pkg_set:#{pkg_set.repository_id}" => Hash['branch' => branch]]
+                end
+
+                Autoproj.message "Query the packages RC branch"
+                # Deal with the packages that are managed within Rock
+                packages_to_branch_out, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+                packages_to_branch_out.each_with_index do |pkg, i|
+                    Autoproj.message "  [#{i + 1}/#{packages_to_branch_out.size}] #{pkg.name}"
+                    pkg = pkg.autobuild
+                    if !pkg.importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        raise "The package #{pkg.name}  hasn't the requested branch #{branch}, maybe create the rc-first"
+                    end
+                    versions << Hash[pkg.name => Hash['branch' => branch]]
+                end
                 versions += ops.snapshot_packages(packages_to_snapshot.map { |pkg| pkg.autobuild.name })
 
                 vcs = Autoproj::VCSDefinition.from_raw(Release::ROCK_RELEASE_INFO)
@@ -611,9 +665,20 @@ module Rock
                 notes_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, Release::RELEASE_NOTES, "release notes file to please rock-release", version_commit) do |io|
                     io.puts "This is an empty file meant to allow rock-release to see rock-rc as a release"
                 end
-                buildconf.importer.run_git_bare(buildconf, 'tag', '-f', 'rock-rc', notes_commit)
-                buildconf.importer.run_git_bare(buildconf, 'push', '-f', '--tags', buildconf.importer.push_to)
+
+                bootstrap_commit = Autoproj::Ops::Snapshot.create_commit(buildconf, "bootstrap.sh", "bootstrap.sh for this release", notes_commit) do |io|
+                    File.open(File.join(buildconf.srcdir,"bootstrap.sh")).readlines.each do |line|
+                        if line.include? "BOOTSTRAP_ARGS="
+                            io.puts "BOOTSTRAP_ARGS=branch=rock-rc"
+                        else
+                            io.puts line
+                        end
+                    end
+                end
+                buildconf.importer.run_git_bare(buildconf, 'branch', '-f', 'rock-rc', bootstrap_commit)
+                buildconf.importer.run_git_bare(buildconf, 'push', '-f', buildconf.importer.push_to)
             end
+
 
             desc "delete-rc", "delete a release candidate environment created with create-rc"
             option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
