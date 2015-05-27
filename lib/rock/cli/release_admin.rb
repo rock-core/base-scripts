@@ -14,7 +14,7 @@ module Rock
             attr_reader :config_dir
 
             ROCK_VCS_LOCATIONS = [
-                /gitorious.*\/rock(?:-[\w-]+)?\//,
+                #/gitorious.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/orocos-toolchain\//]
 
