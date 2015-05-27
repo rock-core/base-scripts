@@ -23,9 +23,23 @@ module Rock
                 Autoproj.load_config
                 Autoproj::CmdLine.initialize_root_directory
                 @config_dir = Autoproj.config_dir
-                @manifest = Autoproj.manifest
+                @manifest = ensure_autoproj_initialized
             end
 
+            def ensure_autoproj_initialized
+                if !Autoproj.manifest
+                    if options[:verbose]
+                        Autoproj::CmdLine.initialize_and_load([])
+                    else
+                        Autoproj.silent do
+                            Autoproj::CmdLine.initialize_and_load([])
+                        end
+                    end
+                end
+                Autoproj.manifest
+            end
+
+            attr_reader :manifest
             no_commands do
                 def invoke_command(*args, &block)
                     super
@@ -47,26 +61,13 @@ module Rock
                     end
                 end
 
-                def ensure_autoproj_initialized
-                    if !Autoproj.manifest
-                        if options[:verbose]
-                            Autoproj::CmdLine.initialize_and_load([])
-                        else
-                            Autoproj.silent do
-                                Autoproj::CmdLine.initialize_and_load([])
-                            end
-                        end
-                    end
-                    Autoproj.manifest
-                end
 
                 def rock_package?(package)
                     ROCK_VCS_LOCATIONS.any? { |matcher| matcher === package.vcs.url }
                 end
 
                 def tag_rock_packages(packages, release_name, options = Hash.new)
-                    options = Kernel.validate_options options,
-                        branch: 'stable'
+                    options = Kernel.validate_options options, branch: 'stable'
                     branch = options[:branch]
                     packages.find_all do |pkg|
                         importer = pkg.importer
@@ -271,7 +272,6 @@ module Rock
                     else
                         mailmap = Hash.new
                     end
-                    manifest = ensure_autoproj_initialized
                     master_packages = all_necessary_packages(manifest, 'master')
                     if filter
                         master_packages = master_packages.find_all(&filter)
@@ -400,7 +400,6 @@ module Rock
                     mailmap = Hash.new
                 end
 
-                manifest = ensure_autoproj_initialized
                 packages  = all_necessary_packages(manifest, 'master')
                 packages += all_necessary_packages(manifest, 'stable')
                 packages = packages.uniq(&:name).sort_by(&:name)
@@ -462,7 +461,6 @@ module Rock
                     pkg.package_set.name == 'rock'
                 end
 
-                manifest = ensure_autoproj_initialized
                 warnings.each do |pkg_name, w|
                     pkg = manifest.find_package(pkg_name)
                     w.each do |line|
@@ -534,7 +532,6 @@ module Rock
             option :exclude, desc: "packages on which the RC branch should not be created", type: :array, default: []
             option :update, type: :boolean, default: true, desc: "whether the RC branch should be updated even if it exists or not"
             def create_rc
-                manifest = ensure_autoproj_initialized
                 # We checkout and branch all packages, not only the stable
                 # ones, to ease release of new packages. This does not mean
                 # that we're going to release all of them, of course !
@@ -609,7 +606,6 @@ module Rock
             desc "checkout", "checkout all packages that are included in a given flavor (stable by default). This is done by 'prepare'"
             option 'flavor', type: :string, default: :stable
             def checkout
-                manifest = ensure_autoproj_initialized
                 Autobuild.do_update = true
                 all_necessary_packages(manifest, options[:flavor].to_s).each do |pkg|
                     pkg.autobuild.import(checkout_only: false, only_local: true)
