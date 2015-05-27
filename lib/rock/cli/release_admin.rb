@@ -599,8 +599,36 @@ module Rock
             end
 
             desc "delete-rc", "delete a release candidate environment created with create-rc"
+            option :exclude, doc: "packages on which the RC branch should not be created", type: :array, default: []
             option :branch, desc: "the release candidate branch", type: :string, default: 'rock-rc'
             def delete_rc
+                packages = all_necessary_packages(manifest,'master')
+                branch = options['branch']
+
+                check_out_missing_packages('stable')
+
+                packages.each do |pkg|
+                    pkg.autobuild.import(checkout_only: true)
+                end
+
+                excluded_by_user = options[:exclude].flat_map do |entry|
+                    entry.split(',')
+                end
+
+                # Deal with the packages that are managed within Rock
+                packages_to_handle, packages_to_snapshot = packages.partition do |pkg|
+                    !excluded_by_user.include?(pkg.name) && rock_package?(pkg)
+                end
+
+                packages_to_handle.each do |pkg|
+                    pkg = pkg.autobuild
+                    importer = pkg.importer
+                    if importer.nil?
+                        Autoproj.error "No importer for #{pkg.name}"
+                        return -1
+                    end
+                    importer.run_git_bare(pkg,"push", "autobuild", ":#{branch}")
+                end
             end
 
             desc "checkout", "checkout all packages that are included in a given flavor (stable by default). This is done by 'prepare'"
