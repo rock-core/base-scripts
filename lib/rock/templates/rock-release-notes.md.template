@@ -38,21 +38,21 @@ Obsoleted package and functionality
 <% end %>
 <% end %>
 
-<% errors = errors.map(&:name).sort %>
 Could not generate a changelog for <%= errors.size %> packages as their
-version control does not support it: <% errors.each do |pkg_name| %>
+version control does not support it: <% errors.sort.each do |pkg_name| %>
     [<%= pkg_name %>](#<%= pkg_name %>)
 <% end %>
 
 <table class="package_status">
+<% id = 0 %>
 <% status.each do |pkg, from_commits, to_commits| %>
 <%   if (!from_commits.empty? || !to_commits.empty?) %>
-       <tr class="name" id="<%= pkg.name %>">
-         <th><%= pkg.name %></th>
+       <tr class="name" id="<%= id%>">
+         <th><%= pkg %></th>
        </tr>
        <% if !from_commits.empty? %>
          <tr class="from_commits_header">
-           <td><a class="commit_event_toggler" id="<%= id += 1 %>"> <%= from_commits.size %> commits</a> in <%= from_flavor %> but not in <%= to_flavor %></td>
+           <td><a class="commit_event_toggler" id="<%= id += 1 %>"> <%= from_commits.size %> commits</a> in <%= from_commits %> but not in <%= to_commits %></td>
          </tr>
          <tr class="from_commits" id="commits_<%= id %>"><td>
          <% from_commits.each do |line|
@@ -63,7 +63,7 @@ version control does not support it: <% errors.each do |pkg_name| %>
        <% end %>
        <% if !to_commits.empty? %>
          <tr class="to_commits_header">
-           <td><a class="commit_event_toggler" id="<%= id += 1 %>"> <%= to_commits.size %> commits</a> in <%= to_flavor %> but not in <%= from_flavor %></td>
+           <td><a class="commit_event_toggler" id="<%= id += 1 %>"> <%= to_commits.size %> commits</a> in <%= to_commits %> but not in <%= from_commits %></td>
          </tr>
          <tr class="to_commits" id="commits_<%= id %>"><td>
          <% to_commits.each do |line|
