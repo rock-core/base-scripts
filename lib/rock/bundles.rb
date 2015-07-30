@@ -358,9 +358,9 @@ module Rock
             # Check if the transformer is available. It if is, set it up
             begin
                 require 'transformer/runtime'
+                Transformer.use_bundle_loader
                 @transformer_config ||= "transforms.rb"
                 if conf_file = find_file('config', @transformer_config, :order => :specific_first)
-                    Transformer.use_bundle_loader
                     Orocos.transformer.load_conf(conf_file)
                 end
             rescue LoadError
