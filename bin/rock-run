@@ -2,7 +2,7 @@
 
 require 'rock/bundle'
 
-Rock::Bundles.load
+Rock::Bundles.setup_search_paths
 filename =
     if File.file?(ARGV.first)
         ARGV.shift
@@ -44,7 +44,7 @@ if Orocos::Scripts.gui?
 end
 require 'orocos/scripts'
 
-Orocos.initialize
+Rock::Bundles.initialize
 
 if !name
     if model =~ /::/
