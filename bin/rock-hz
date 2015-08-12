@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+options = {}
+
+optparse = OptionParser.new do |opts|
+    opts.banner = "usage: rock-hz -t <task-name> -p <port-name>"
+
+    opts.on("-t","--task TASK","task name") do |t|
+        options[:task_name] = t
+    end
+
+    opts.on("-p","--port PORT","port name") do |p|
+        options[:port_name] = p
+    end
+
+    opts.on("-b","--buffersize BUFFERSIZE","buffersize") do |size|
+        options[:buffersize] = size.to_i
+    end
+
+    opts.on_tail("-h","--help", "Show this message") do
+        puts opts
+        exit
+    end
+end
+optparse.parse!
+
+if !(options[:task_name] || options[:port_name])
+    puts optparse
+    exit
+end
+
+require 'orocos'
+Orocos.initialize
+
+task = Orocos.get options[:task_name]
+port = task.port options[:port_name]
+buffersize = options[:buffersize] || 1000
+port_reader = port.reader :type => :buffer, :size => buffersize
+
+queue = []
+max_queue_size = 10
+one_s_counter = 0
+one_s_timer = Time.now
+progress_message = nil
+
+begin
+    while true
+            sample_counter = 0
+            while port_reader.read_new && (Time.now - one_s_timer) < 1
+                sample_counter += 1
+                if sample_counter > buffersize
+                    msg = "\nPlease increase buffer size (using option '-b') since it is likely overflown.\n"
+                    msg += "     - current buffer size: #{buffersize}\n"
+                    msg += "     - samples read in less than a second: #{sample_counter}"
+                    puts msg
+                    exit -1
+                end
+                one_s_counter += 1
+            end
+
+            if queue.size != max_queue_size || ! (ten_s_frequency = queue.reduce(:+)/10)
+                ten_s_frequency = "n/a"
+            end
+
+            # Terminal code to go up 1 line and clear the line
+            print "\r" + ("\e[A\e[K"*2) if progress_message
+
+            progress_message = "message frequency (past 1 second):     #{one_s_counter}\n"
+            progress_message += "message frequency (past 10 seconds):   #{ten_s_frequency}"
+            puts "#{progress_message}"
+
+
+            if (Time.now - one_s_timer) > 1
+                if queue.size == max_queue_size
+                    queue.pop
+                end
+                queue.push one_s_counter
+                one_s_counter = 0
+                one_s_timer = Time.now
+            end
+
+            sleep 0.1
+    end
+rescue SystemExit, Interrupt
+end
