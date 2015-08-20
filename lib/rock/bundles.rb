@@ -54,6 +54,12 @@ module Rock
                 @path = path
             end
 
+            def ==(other)
+                return false if !other.kind_of?(Bundle)
+                other.name == name &&
+                    other.path == path
+            end
+
             # Loads the configuration file, or return an already loaded
             # configuration
             def load_config
@@ -262,11 +268,15 @@ module Rock
 
             if current_bundle
                 selected_bundles = discover_dependencies(current_bundle)
-                Bundles.info "Active bundles: #{selected_bundles.map(&:name).join(", ")}"
+                if @selected_bundles != selected_bundles
+                    Bundles.info "Active bundles: #{selected_bundles.map(&:name).join(", ")}"
+                end
             else
-                Bundles.info "No bundle currently selected"
                 current_bundle = Bundle.new(Dir.pwd)
                 selected_bundles = [current_bundle]
+                if @selected_bundles != selected_bundles
+                    Bundles.info "No bundle currently selected"
+                end
             end
 
             selected_bundles.reverse.each do |b|
@@ -303,6 +313,7 @@ module Rock
                     $LOAD_PATH.unshift libdir
                 end
             end
+            @selected_bundles = selected_bundles
         end
 
         # The full path to the configuration directory
@@ -347,9 +358,9 @@ module Rock
             # Check if the transformer is available. It if is, set it up
             begin
                 require 'transformer/runtime'
+                Transformer.use_bundle_loader
                 @transformer_config ||= "transforms.rb"
                 if conf_file = find_file('config', @transformer_config, :order => :specific_first)
-                    Transformer.use_bundle_loader
                     Orocos.transformer.load_conf(conf_file)
                 end
             rescue LoadError
