@@ -1,6 +1,6 @@
 <%
     pkg, pkg_set = object.autobuild, object.package_set
-    vcs_def = Autoproj.manifest.importer_definition_for(pkg.name)
+    vcs_def = object.vcs
     set_vcs_def = pkg_set.vcs
     if pkg.description
         authors = REXML::XPath.each(pkg.description.xml, "//author").map(&:text).
@@ -19,7 +19,7 @@
     pkg_deps = pkg.dependencies.
         find_all { |dep_name| !all_opt_deps.include?(dep_name) }.
         sort.map do |name|
-            if !(package = Autoproj.manifest.package(name))
+            if !(package = manifest.package(name))
                 raise ArgumentError, "cannot find definition for package #{name}"
             end
             page.link_to(package)
@@ -30,7 +30,7 @@
 
     pkg_opt_deps = pkg_opt_deps.
         sort.map do |name|
-            if !(package = Autoproj.manifest.package(name))
+            if !(package = manifest.package(name))
                 raise ArgumentError, "cannot find definition for package #{name}"
             end
             page.link_to(package)

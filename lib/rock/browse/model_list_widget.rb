@@ -2,6 +2,8 @@ module Rock
 module Browse
 class ModelListWidget < Qt::TreeWidget
     attr_reader :loader
+    attr_reader :manifest
+    attr_reader :osdeps
     attr_reader :roots
 
     #--
@@ -25,15 +27,18 @@ class ModelListWidget < Qt::TreeWidget
     ]
 
     def self.default_loader
-        loader = OroGen::Loaders::PkgConfig.new(OroGen.orocos_target)
-        OroGen::Loaders::RTT.setup_loader(loader)
-        loader
+        OroGen::Loaders::RTT.new(OroGen.orocos_target)
     end
 
-    def initialize(parent = nil, loader = self.class.default_loader)
+    def initialize(parent = nil,
+                   loader = self.class.default_loader,
+                   manifest = Autoproj.manifest,
+                   osdeps = Autoproj.osdeps)
         super(parent)
 
         @loader = loader
+        @manifest = manifest
+        @osdeps = osdeps
 
         @roots = Array.new
         ROLE_NAMES.each_with_index do |name, i|
@@ -48,10 +53,7 @@ class ModelListWidget < Qt::TreeWidget
     end
 
     def reload
-        if Orocos.loaded?
-            Orocos.clear
-        end
-        Orocos.load
+        loader.clear
         populate
     end
 
@@ -79,7 +81,7 @@ class ModelListWidget < Qt::TreeWidget
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TASK))
         end
 
-        Autoproj.manifest.packages.values.sort_by(&:name).each do |pkg|
+        manifest.packages.values.sort_by(&:name).each do |pkg|
             role = if File.directory?(pkg.autobuild.srcdir)
                        ROLE_INSTALLED_PACKAGE
                    else
@@ -91,13 +93,13 @@ class ModelListWidget < Qt::TreeWidget
             item.set_data(0, Qt::UserRole, Qt::Variant.new(role))
         end
 
-        Autoproj.manifest.each_package_set.sort_by(&:name).each do |pkg_set|
+        manifest.each_package_set.sort_by(&:name).each do |pkg_set|
             item = Qt::TreeWidgetItem.new(roots[ROLE_PACKAGE_SET])
             item.set_text(0, pkg_set.name)
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_PACKAGE_SET))
         end
 
-        Autoproj.osdeps.all_definitions.keys.sort.each do |osdep_name|
+        osdeps.all_definitions.keys.sort.each do |osdep_name|
             item = Qt::TreeWidgetItem.new(roots[ROLE_OSDEPS])
             item.set_text(0, osdep_name)
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OSDEPS))

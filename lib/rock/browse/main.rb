@@ -2,6 +2,10 @@ module Rock
 module Browse
 # The main window of rock-browse
 class Main < Qt::Widget
+    attr_reader :loader
+    attr_reader :manifest
+    attr_reader :osdeps
+
     # The page object in which we render
     #
     # @return [MetaRuby::GUI::HTML::Page]
@@ -21,8 +25,16 @@ class Main < Qt::Widget
     # @return [Array<#render>]
     attr_reader :displays
 
-    def initialize(parent = nil)
-        super
+    def initialize(parent = nil,
+                   loader = ModelListWidget.default_loader,
+                   manifest = Autoproj.manifest,
+                   osdeps = Autoproj.osdeps)
+
+        @loader = loader
+        @manifest = manifest
+        @osdeps = osdeps
+
+        super(parent)
         create_ui
 
         @displays = Array.new
@@ -52,7 +64,7 @@ class Main < Qt::Widget
         main_layout.add_layout(menu_layout)
         main_layout.add_widget(splitter)
 
-        @view = ModelListWidget.new(splitter)
+        @view = ModelListWidget.new(splitter, loader, manifest, osdeps)
         text = Qt::WebView.new(splitter)
         @page = Page.new(text.page)
         splitter.add_widget(view)
@@ -93,19 +105,19 @@ class Main < Qt::Widget
     def render(name, role)
         page.clear
         if role == ModelListWidget::ROLE_OROGEN_TYPE
-            Orocos.load_typekit_for(name, false)
-            displays[role].render(Orocos.registry.get(name))
+            typekit = loader.typekit_for(name, false)
+            displays[role].render(typekit.resolve_type(name))
         elsif role == ModelListWidget::ROLE_OROGEN_TASK
-            model = Orocos.task_model_from_name(name)
+            model = loader.task_model_from_name(name)
             displays[role].render(model)
         elsif role == ModelListWidget::ROLE_INSTALLED_PACKAGE || role == ModelListWidget::ROLE_AVAILABLE_PACKAGE
-            package = Autoproj.manifest.packages[name]
+            package = manifest.each_package_definition.find { |pkg| pkg.name == name }
             displays[role].render(package)
         elsif role == ModelListWidget::ROLE_PACKAGE_SET
-            package = Autoproj.manifest.each_package_set.find { |pkg_set| pkg_set.name == name }
+            package = manifest.each_package_set.find { |pkg_set| pkg_set.name == name }
             displays[role].render(package)
         elsif role == ModelListWidget::ROLE_OSDEPS
-            osdep = Rock::HTML::OSPackage.new(name)
+            osdep = Rock::HTML::OSPackage.new(name, osdeps.all_definitions[name])
             displays[role].render(osdep)
         else
             Kernel.raise ArgumentError, "invalid role #{role}"

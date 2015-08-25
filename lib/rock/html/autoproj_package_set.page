@@ -18,7 +18,7 @@
     end
     set_packages = pkg_set.each_package.sort_by(&:name)
     set_packages = set_packages.map do |pkg|
-        page.link_to(Autoproj.manifest.package(pkg.name))
+        page.link_to(manifest.package(pkg.name))
     end
     osdeps = pkg_set.each_osdep.sort.map do |name|
         page.link_to(OSPackage.new(name))
