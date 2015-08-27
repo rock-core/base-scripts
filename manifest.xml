@@ -6,5 +6,7 @@
   <depend package="tools/roby" optional="1" />
   <depend package="kramdown" />
   <depend package="thor" />
+  <depend package="hoe" />
+  <depend package="hoe-yard" />
 
 </package>
