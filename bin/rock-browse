@@ -1,12 +1,27 @@
 #! /usr/bin/env ruby
 require 'rock/browse'
 
+manifest, osdeps = nil
 Autoproj.silent do
-    Autoproj::CmdLine.initialize_and_load
+    begin
+        require 'autoproj/cli/inspection_tool'
+        cli = Autoproj::CLI::InspectionTool.new
+        cli.initialize_and_load
+        cli.finalize_setup
+        manifest = cli.ws.manifest
+        osdeps = cli.ws.osdeps
+    rescue LoadError
+        Autoproj::CmdLine.initialize_and_load
+        manifest = Autoproj.manifest
+        osdeps = Autoproj.osdeps
+    end
 end
 
 app = Qt::Application.new(ARGV)
-main = Rock::Browse::Main.new
+main = Rock::Browse::Main.new(
+    nil, Rock::Browse::ModelListWidget.default_loader,
+    manifest, osdeps)
+
 main.reload
 main.show
 

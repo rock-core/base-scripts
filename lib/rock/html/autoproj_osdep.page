@@ -1,6 +1,6 @@
 <% 
 name = object.name
-data = Autoproj.osdeps.all_definitions[name]
+data = object.data
    
 data.map do |files, info|
     if info.kind_of?(Hash)

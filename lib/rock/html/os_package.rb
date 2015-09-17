@@ -4,9 +4,12 @@ module Rock
         class OSPackage
             # The package name
             attr_reader :name
+            # The osdep definition, as a list of file-to-osdep info
+            attr_reader :data
 
-            def initialize(name)
+            def initialize(name, data)
                 @name = name
+                @data = data
             end
         end
     end
