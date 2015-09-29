@@ -709,10 +709,14 @@ module Rock
                     pkg = pkg.autobuild
                     importer = pkg.importer
                     if importer.nil?
-                        Autoproj.error "No importer for #{pkg.name}"
-                        return -1
+                        Autoproj.warn "No importer for #{pkg.name}"
+                        #return -1
                     end
-                    importer.run_git_bare(pkg,"push", "autobuild", ":#{branch}")
+                    if importer.has_commit?(pkg, "refs/remotes/autobuild/#{branch}")
+                        importer.run_git_bare(pkg,"push", "autobuild", ":#{branch}")
+                    else
+                        Autoproj.warn "#{pkg.name} has no rc-branch"
+                    end
                 end
             end
 
