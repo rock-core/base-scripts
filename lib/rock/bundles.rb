@@ -434,7 +434,6 @@ module Rock
             end
 
             self.load
-            Roby.app.setup_dirs
             if Bundles.public_logs?
                 Bundles.info "log files are going in #{Bundles.log_dir}"
             end
@@ -529,7 +528,11 @@ module Rock
             Roby.app.find_files_in_dirs(*args)
         end
         def self.log_dir
-            Roby.app.log_dir
+            if Roby.app.created_log_dir?
+                Roby.app.log_dir
+            else
+                Roby.app.find_and_create_log_dir
+            end
         end
 
         # If true, the logs are going to be kept. Otherwise, the log folder is
