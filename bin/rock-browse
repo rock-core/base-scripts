@@ -9,7 +9,7 @@ Autoproj.silent do
         cli.initialize_and_load
         cli.finalize_setup
         manifest = cli.ws.manifest
-        osdeps = cli.ws.osdeps
+        osdeps = cli.ws.os_package_resolver
     rescue LoadError
         Autoproj::CmdLine.initialize_and_load
         manifest = Autoproj.manifest
