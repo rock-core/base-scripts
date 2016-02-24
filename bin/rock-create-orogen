@@ -1,5 +1,11 @@
 #! /bin/sh
 
+which orogen > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "'orogen' executable required, but not found, please check that you installed orogen"
+    exit 1
+fi
+
 name=$1
 if test -z "$name"; then
     if test -f manifest.xml; then
