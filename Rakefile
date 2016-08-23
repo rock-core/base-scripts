@@ -22,7 +22,7 @@ begin
             ['thor'] <<
             ['rake']
 
-        test_globs = ['test/suite.rb', 'test/test_bundles.rb']
+        test_globs = ['test/**_test.rb']
     end
 
     Rake.clear_tasks(/^default$/)
