@@ -69,13 +69,13 @@ class ModelListWidget < Qt::TreeWidget
         end
         clear
         
-        loader.available_types.keys.sort.each do |name|
+        loader.each_available_type_name do |name, _|
             item = Qt::TreeWidgetItem.new(roots[ROLE_OROGEN_TYPE])
             item.set_text(0, name)
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TYPE))
         end
 
-        loader.available_task_models.keys.sort.each do |name|
+        loader.each_available_task_model_name do |name|
             item = Qt::TreeWidgetItem.new(roots[ROLE_OROGEN_TASK])
             item.set_text(0, name)
             item.set_data(0, Qt::UserRole, Qt::Variant.new(ROLE_OROGEN_TASK))

@@ -133,7 +133,7 @@ module Rock
             return found if !unkown.empty?
 
             #find all tasks which are matching the pattern
-            orogen_loader.available_task_models.each do |name, project_name|
+            orogen_loader.each_available_task_model_name do |name, project_name|
                 if name =~ pattern || project_name =~ pattern
                     if tasklib = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
                         task = tasklib.self_tasks.values.find { |t| t.name == name }
@@ -153,7 +153,7 @@ module Rock
             filter,unkown = Kernel::filter_options(filter,[:types,:ports])
             return found if !unkown.empty?
             #find all tasks which are matching the pattern
-            orogen_loader.available_task_models.each do |name, project_name|
+            orogen_loader.each_available_task_model_name.each do |name, project_name|
                 if tasklib = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
                     tasklib.self_tasks.each_value do |task|
                         task.each_port do |port|
@@ -174,22 +174,14 @@ module Rock
             found = Array.new
             filter,unkown = Kernel::filter_options(filter,[:types])
             return found if !unkown.empty?
-            orogen_loader.available_projects.each_key do |project_name|
-                seen = Set.new
-                next if !orogen_loader.has_typekit?(project_name)
-
-                typekit = load_orogen_typekit(orogen_loader, project_name, Rock::Inspect::debug)
-                next if !typekit
-                matching_types = typekit.typelist.grep(pattern)
-                matching_types.each do |type_name|
-                    if !seen.include?(type_name)
-                        object = orogen_loader.resolve_type(type_name)
-                        if type_match?(object,pattern,filter)
-                            found << SearchItem.new(:name => "Type::#{type_name}",
-                                                    :project_name => project_name,
-                                                    :object => object)
-                        end
-                        seen << type_name
+            orogen_loader.each_available_type_name do |type_name, typekit_name, exported|
+                if pattern === type_name
+                    orogen_loader.typekit_model_from_name(typekit_name)
+                    object = orogen_loader.resolve_type(type_name)
+                    if type_match?(object,pattern,filter)
+                        found << SearchItem.new(:name => "Type::#{type_name}",
+                                                :project_name => typekit_name,
+                                                :object => object)
                     end
                 end
             end
@@ -200,10 +192,10 @@ module Rock
             found = []
             filter,unkown = Kernel::filter_options(filter,[:types,:ports,:tasks,:deployments])
             return found if !unkown.empty?
-            orogen_loader.available_projects.each_key do |project_name|
-                tasklib = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
-                tasklib.deployers.values.each do |deployer|
-                    if pattern === deployer.name || pattern === tasklib.name ||
+            orogen_loader.each_available_project_name do |project_name|
+                project = load_orogen_project(orogen_loader, project_name, Rock::Inspect::debug)
+                project.deployers.values.each do |deployer|
+                    if pattern === deployer.name || pattern === project.name ||
                         deployer.task_activities.find { |t| pattern === t.name || pattern === t.task_model.name }
                         found << SearchItem.new(:name => "Deployment::#{deployer.name}",
                                                 :project_name => project_name,
@@ -228,11 +220,10 @@ module Rock
             end
           
             # Either use all available projects or subset, as defined by the previous contrains 
-            projects=Array.new
-            if !use_whitelist 
-                orogen_loader.available_projects.each {|name,project| projects << name}
+            if use_whitelist 
+                projects = found.map(&:name)
             else
-                found.each {|item| projects << item.name }
+                projects = orogen_loader.each_available_project_name.to_a
             end
 
             projects.each do |name|
