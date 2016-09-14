@@ -9,4 +9,8 @@
   <depend package="hoe" />
   <depend package="hoe-yard" />
 
+  <test_depend package="flexmock" />
+  <test_depend package="minitest" />
+  <test_depend package="tools/orocos.rb" />
+
 </package>
