@@ -1,10 +1,15 @@
 #!/usr/bin/env ruby
 
 require 'optparse'
+require 'orocos'
 
 options = Hash[buffersize: 1000, pull: false]
 optparse = OptionParser.new do |opts|
     opts.banner = "usage: rock-hz -t <task-name> -p <port-name>"
+
+    opts.on('--host=HOST', String) do |host|
+        Orocos::CORBA.name_service.ip = host
+    end
 
     opts.on("-t","--task TASK","task name") do |t|
         options[:task_name] = t
@@ -33,7 +38,6 @@ if !(options[:task_name] || options[:port_name])
     exit
 end
 
-require 'orocos'
 Orocos.initialize
 
 task = Orocos.get options[:task_name]
