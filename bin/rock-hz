@@ -3,12 +3,20 @@
 require 'optparse'
 require 'orocos'
 
-options = Hash[buffersize: 1000, pull: false]
+policy = Hash[type: :buffer, size: 1000, pull: false]
+one_s_progress = [nil]
+ten_s_progress = [nil]
+options = Hash.new
 optparse = OptionParser.new do |opts|
     opts.banner = "usage: rock-hz -t <task-name> -p <port-name>"
 
     opts.on('--host=HOST', String) do |host|
         Orocos::CORBA.name_service.ip = host
+    end
+
+    opts.on('-c COUNT', '--count=COUNT', Integer) do |count|
+        one_s_progress = [nil] * count
+        ten_s_progress = [nil] * count
     end
 
     opts.on("-t","--task TASK","task name") do |t|
@@ -19,11 +27,12 @@ optparse = OptionParser.new do |opts|
         options[:port_name] = p
     end
 
-    opts.on("-b","--buffersize BUFFERSIZE","buffersize") do |size|
-        options[:buffersize] = size.to_i
+    opts.on("-b","--buffersize BUFFERSIZE",Integer,"buffersize") do |size|
+        policy[:type] = :buffer
+        policy[:size] = Integer(size)
     end
     opts.on '--pull', 'use a pull connection' do
-        options[:pull] = true
+        policy[:pull] = true
     end
 
     opts.on_tail("-h","--help", "Show this message") do
@@ -31,19 +40,19 @@ optparse = OptionParser.new do |opts|
         exit
     end
 end
-optparse.parse!
+task_name, port_name = optparse.parse(ARGV)
 
-if !(options[:task_name] || options[:port_name])
-    puts optparse
-    exit
+require 'rock/cli'
+require 'tty-cursor'
+require 'tty-table'
+Orocos.initialize
+port = Rock::CLI.choose_orocos_task_and_port(
+    task_name: options[:task_name] || task_name, port_name: options[:port_name] || port_name)
+if !port
+    exit 1
 end
 
-Orocos.initialize
-
-task = Orocos.get options[:task_name]
-port = task.port options[:port_name]
-port_reader = port.reader type: :buffer, size: options[:buffersize],
-    pull: options[:pull]
+port_reader = port.reader(**policy)
 
 min_reporting_period = 1
 def compute_frequency(now, queue, window_duration)
@@ -59,6 +68,17 @@ def compute_frequency(now, queue, window_duration)
         0
     end
 end
+
+msg_header = ["Message Frequencies"]
+if one_s_progress.size != 1
+    msg_header.concat(one_s_progress.size.times.map { |i| "t-#{i}" })
+else
+    msg_header << ""
+end
+
+puts
+puts
+cursor = TTY::Cursor
 
 begin
     one_s_queue = []
@@ -79,12 +99,27 @@ begin
         one_s = compute_frequency(now, one_s_queue, 1)
         ten_s = compute_frequency(now, ten_s_queue, 10)
 
-        # Terminal code to go up 1 line and clear the line
-        puts "message frequency (past 1 second): #{one_s}"
-        puts "message frequency (past 10 second): #{ten_s}"
+        cursor.restore
+
+        one_s_progress.unshift one_s
+        ten_s_progress.unshift ten_s
+        one_s_progress.pop
+        ten_s_progress.pop
+
+        print cursor.prev_line
+        print cursor.prev_line
+        print cursor.clear_lines(3, :down)
+        print cursor.prev_line
+        print cursor.prev_line
+        table = TTY::Table.new(
+            header: msg_header,
+            rows: [["Past 1s", *one_s_progress.compact.map { |n| "%.1f" % [n] }],
+                   ["Past 10s", *ten_s_progress.compact.map { |n| "%.1f" % [n] }]])
+        print table.render(:basic)
+
         if !has_new_samples
             sleep 0.1
         end
     end
-rescue SystemExit, Interrupt
+rescue Interrupt
 end
