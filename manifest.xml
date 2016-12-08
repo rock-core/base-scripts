@@ -8,6 +8,9 @@
   <depend package="thor" />
   <depend package="hoe" />
   <depend package="hoe-yard" />
+  <depend package="tty-prompt" />
+  <depend package="tty-cursor" />
+  <depend package="tty-table" />
 
   <test_depend package="flexmock" />
   <test_depend package="minitest" />
