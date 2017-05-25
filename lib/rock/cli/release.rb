@@ -25,29 +25,30 @@ module Rock
             RELEASE_VERSIONS = "overrides.d/25-release.yml"
 
             attr_reader :config
-            attr_reader :config_dir
             attr_reader :package
             attr_reader :importer
 
             class InvalidReleaseName < Autobuild::PackageException; end
 
-            def initialize(*args)
-                super
-
-                Autoproj.load_config
-                Autoproj.silent do
-                    require 'autoproj/gitorious'
-                end
-                Autoproj::CmdLine.initialize_root_directory
-                @config_dir = Autoproj.config_dir
-                vcs = Autoproj::VCSDefinition.from_raw(ROCK_RELEASE_INFO)
-                @package = Autoproj::Ops::Tools.
-                    create_autobuild_package(vcs, "main configuration", Autoproj.config_dir)
-                @importer = package.importer
-                importer.remote_name = 'rock-core'
-            end
-
             no_commands do
+                def config_dir
+                    @ws.config_dir
+                end
+
+                def initialize(*args)
+                    super
+
+                    @ws = Autoproj::Workspace.from_environment
+                    @ws.set_as_main_workspace
+                    @ws.load_config
+                    require 'autoproj/git_server_configuration'
+                    vcs = Autoproj::VCSDefinition.from_raw(ROCK_RELEASE_INFO)
+                    @package = Autoproj::Ops::Tools.
+                        create_autobuild_package(vcs, "main configuration", config_dir)
+                    @importer = package.importer
+                    importer.remote_name = 'rock-core'
+                end
+
                 def fetch_release_notes(release_name)
                     verify_release_name(release_name)
                     importer.show(package, release_name, RELEASE_NOTES)
@@ -59,7 +60,7 @@ module Rock
                 end
             
                 def ensure_overrides_dir_present
-                    FileUtils.mkdir_p Autoproj.overrides_dir
+                    FileUtils.mkdir_p @ws.overrides_dir
                 end
 
                 def verify_release_name(release_name, options = Hash.new)
@@ -71,7 +72,7 @@ module Rock
                 rescue Autobuild::PackageException
                     if !options[:only_local]
                         # Try harder, fetch the remote branch
-                        importer.fetch_remote(package)
+                        importer.tags(package)
                         return verify_release_name(release_name, only_local: true)
                     end
                     raise InvalidReleaseName.new(package, 'import'),
@@ -144,13 +145,13 @@ module Rock
             def switch(release_name)
                 if release_name == "master"
                     FileUtils.rm_f File.join(config_dir, RELEASE_VERSIONS)
-                    Autoproj.config.set("ROCK_SELECTED_FLAVOR", "master")
-                    Autoproj.save_config
+                    @ws.config.set("ROCK_SELECTED_FLAVOR", "master")
+                    @ws.save_config
                     Autoproj.message "successfully setup flavor #{release_name}"
                 elsif release_name == "stable"
                     FileUtils.rm_f File.join(config_dir, RELEASE_VERSIONS)
-                    Autoproj.config.set("ROCK_SELECTED_FLAVOR", "stable")
-                    Autoproj.save_config
+                    @ws.config.set("ROCK_SELECTED_FLAVOR", "stable")
+                    @ws.save_config
                     Autoproj.message "successfully setup flavor #{release_name}"
                 else
                     versions = fetch_version_file(release_name)

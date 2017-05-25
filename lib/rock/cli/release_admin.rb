@@ -1,5 +1,6 @@
 require 'thor'
 require 'autoproj'
+require 'autoproj/cli/inspection_tool'
 
 module Rock
     module CLI
@@ -11,37 +12,28 @@ module Rock
             class_option :verbose, type: :boolean, default: true
             def self.exit_on_failure?; true end
 
-            attr_reader :config_dir
-
             ROCK_VCS_LOCATIONS = [
                 #/gitorious.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/rock(?:-[\w-]+)?\//,
                 /github.*\/orocos-toolchain\//]
 
-
-
-            def initialize(*args)
-                super
-                Autoproj.load_config
-                Autoproj::CmdLine.initialize_root_directory
-                @config_dir = Autoproj.config_dir
-                @manifest = ensure_autoproj_initialized
-            end
-
-            def ensure_autoproj_initialized
-                if !Autoproj.manifest
-                    if options[:verbose]
-                        Autoproj::CmdLine.initialize_and_load([])
-                    else
-                        Autoproj.silent do
-                            Autoproj::CmdLine.initialize_and_load([])
-                        end
-                    end
+            no_commands do
+                def config_dir
+                    @ws.config_dir
                 end
-                Autoproj.manifest
-            end
 
-            attr_reader :manifest
+                def manifest
+                    @ws.manifest
+                end
+
+                def initialize(*args)
+                    super
+                    @ws = Autoproj::Workspace.from_environment
+                    tool = Autoproj::CLI::InspectionTool.new(@ws)
+                    tool.initialize_and_load
+                    tool.finalize_setup
+                end
+            end
 
             no_commands do
                 def invoke_command(*args, &block)
