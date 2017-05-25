@@ -116,17 +116,13 @@ module Rock
                 "displays the list of known releases"
             option 'local', type: :boolean
             def list
-                if !options[:local]
-                    importer.fetch_remote(package)
-                end
-
-                tags = importer.run_git_bare(package, 'tag')
-                releases = tags.find_all do |tag_name|
+                tags = importer.tags(package, only_local: options[:local])
+                releases = tags.find_all do |tag_name, _|
                     begin verify_release_name(tag_name, only_local: true)
                     rescue InvalidReleaseName
                     end
                 end
-                puts releases.sort.join("\n")
+                puts releases.map(&:first).sort.join("\n")
             end
 
             desc "versions RELEASE_NAME",
