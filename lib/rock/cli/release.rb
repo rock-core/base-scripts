@@ -179,6 +179,7 @@ module Rock
                     File.open(File.join(config_dir, RELEASE_VERSIONS), 'w') do |io|
                         io.write versions
                     end
+                    @ws.config.set("ROCK_SELECTED_FLAVOR", "stable")
                     @ws.config.set('current_rock_release', release_name)
                     @ws.save_config
                     Autoproj.message "successfully setup release #{release_name}"
