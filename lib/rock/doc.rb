@@ -86,7 +86,7 @@ module Rock
                     PackageRenderingContext.new(object)
                 when Autoproj::VCSDefinition
                     VCSRenderingContext.new(object)
-                when Orocos::Spec::TaskContext
+                when OroGen::Spec::TaskContext
                     TaskRenderingContext.new(object)
                 when Class
                     if object <= Typelib::Type

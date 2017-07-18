@@ -1,5 +1,5 @@
+require 'orogen'
 require 'utilrb/module/attr_predicate'
-require 'orocos'
 
 module Rock
     class SearchItem
@@ -56,8 +56,8 @@ module Rock
                 if Rock::Inspect::debug
                     raise
                 end
-                Orocos.warn "cannot load the installed oroGen typekit #{name}"
-                Orocos.warn "     #{e.message}"
+                OroGen.warn "cannot load the installed oroGen typekit #{name}"
+                OroGen.warn "     #{e.message}"
                 nil
             end
         end
@@ -70,8 +70,8 @@ module Rock
                 if Rock::Inspect::debug
                     raise
                 end
-                Orocos.warn "cannot load the installed oroGen project #{name}"
-                Orocos.warn "     #{e.message}"
+                OroGen.warn "cannot load the installed oroGen project #{name}"
+                OroGen.warn "     #{e.message}"
                 nil
             end
         end
@@ -386,7 +386,7 @@ module Rock
         attr_reader :name
         def initialize(search_item)
             obj = search_item.object
-            obj = obj.task if obj.is_a? Orocos::Spec::Port
+            obj = obj.task if obj.is_a? OroGen::Spec::Port
 
             @name = obj.name
             @project_name = search_item.project_name

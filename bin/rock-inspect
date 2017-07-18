@@ -2,6 +2,7 @@
 
 require 'optparse'
 require 'rock/rock_inspect'
+require 'utilrb/kernel/options'
 
 search_for = []
 @search_filter = Hash.new
@@ -107,21 +108,20 @@ if remaining.empty? && @search_filter.empty?
 end
 
 begin
-    Orocos.load
     remaining = remaining.join("|")
     result = Rock::Inspect.find(remaining, @search_filter)
 rescue Interrupt
-    Orocos.warn "Interrupted"
+    OroGen.warn "Interrupted"
     exit 1
 end
 
 views = result.map do |item|
     case item.object
-    when Orocos::Spec::TaskContext
+    when OroGen::Spec::TaskContext
         Rock::TaskView.new(item)
-    when Orocos::Spec::Port
+    when OroGen::Spec::Port
         Rock::PortView.new(item) 
-    when Orocos::Spec::Deployment
+    when OroGen::Spec::Deployment
         Rock::DeploymentView.new(item) 
     when Class
         if item.object <= Typelib::Type
