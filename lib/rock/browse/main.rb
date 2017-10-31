@@ -112,10 +112,10 @@ class Main < Qt::Widget
             displays[role].render(model)
         elsif role == ModelListWidget::ROLE_INSTALLED_PACKAGE || role == ModelListWidget::ROLE_AVAILABLE_PACKAGE
             package = manifest.each_package_definition.find { |pkg| pkg.name == name }
-            displays[role].render(package)
+            displays[role].render(self, package)
         elsif role == ModelListWidget::ROLE_PACKAGE_SET
             package = manifest.each_package_set.find { |pkg_set| pkg_set.name == name }
-            displays[role].render(package)
+            displays[role].render(self, package)
         elsif role == ModelListWidget::ROLE_OSDEPS
             osdep = Rock::HTML::OSPackage.new(name, osdeps.all_definitions[name])
             displays[role].render(osdep)

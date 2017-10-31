@@ -150,5 +150,6 @@ if result.empty?
     STDERR.puts " filter types = #{@search_filter[:types]}" if @search_filter.has_key?(:types)
     STDERR.puts " filter plugins = #{@search_filter[:plugin_name]}" if @search_filter.has_key?(:plugin_name)
     STDERR.puts " filter projects = #{@search_filter[:projects]}" if @search_filter.has_key?(:projects)
+    exit 1
 end
 

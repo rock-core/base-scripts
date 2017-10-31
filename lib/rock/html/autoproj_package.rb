@@ -9,17 +9,13 @@ module Rock
                 @template = page.load_template(TEMPLATE_DIR, 'autoproj_package.page')
             end
 
-            def render(object)
+            def render(info, object)
                 page.push nil, template.result(binding)
             end
 
             def api_url(pkg)
                 if page.respond_to?(:api_url) && (url = page.api_url(pkg))
                     url
-                else
-                    if pkg.description
-                        REXML::XPath.each(pkg.description.xml, "//api").first
-                    end
                 end
             end
 
