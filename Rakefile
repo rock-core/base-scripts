@@ -10,7 +10,7 @@ begin
         developer 'Sylvain Joyeux', 'sylvain.joyeux@m4x.org'
         self.version = 0.1
         self.description = 'Scripts that are generally useful in a Rock installation'
-        self.urls        = ["https://github.com/rock-core/base-scripts"]
+        self.urls        = {"home" => "https://github.com/rock-core/base-scripts"}
         self.readme_file = FileList['README*'].first
         self.history_file = "History.txt"
         licenses << 'GPLv2+'
