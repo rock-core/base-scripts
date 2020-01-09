@@ -360,7 +360,7 @@ module Rock
                 require 'transformer/runtime'
                 Transformer.use_bundle_loader
                 @transformer_config ||= "transforms.rb"
-                if conf_file = find_file('config', @transformer_config, :order => :specific_first)
+                find_files('config', @transformer_config, :order => :specific_last, :all => true).each do |conf_file|
                     Orocos.transformer.load_conf(conf_file)
                 end
             rescue LoadError
