@@ -8,7 +8,7 @@ module Rock
                 @template = page.load_template(TEMPLATE_DIR, 'autoproj_package_set.page')
             end
 
-            def render(pkg_set)
+            def render(info, pkg_set)
                 page.push nil, template.result(binding)
             end
 
