@@ -10,7 +10,7 @@ module Rock
                     selected_task = Orocos.get(task_name)
                 rescue Orocos::NotFound
                 end
-                candidates = name_service.names.grep(/(^|\/)#{task_name}/)
+                candidates = name_service.names.grep(/(^|\/)#{task_name}/).sort
                 if candidates.empty?
                     STDERR.puts "No task matches #{task_name}, and none start with #{task_name}"
                     return
