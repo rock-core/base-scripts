@@ -45,7 +45,7 @@ module Rock
             def registered?
                 paths = (ENV['ROCK_BUNDLE_PATH'] || '').split(":")
                 paths.any? do |p|
-                    p == path || path =~ /^#{Regexp.quote(p)}/
+                    p == path || !(path =~ /^#{Regexp.quote(p)}/).nil?
                 end
             end
 
