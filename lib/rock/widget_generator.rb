@@ -48,7 +48,7 @@ module Rock
 
             # Use Rock's create library script to initiate the folder structure, the
             # usual set of files and set everything under version control.
-            if not(system "rock-create-lib #{@base_path}")
+            if not(system "/bin/bash -c \"source /opt/workspace/env.sh && rock-create-lib #{@base_path}\"")
                 raise "Failed calling rock-create-lib. Check above for an error message."
             end
 
