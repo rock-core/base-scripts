@@ -5,6 +5,11 @@ module Rock
         def self.choose_orocos_task_and_port(name_service: Orocos.name_service, task_name: nil, port_name: nil)
             prompt = TTY::Prompt.new
 
+            prompt.on(:keyctrl_x, :keyescape, :keyctrl_c) do
+                puts "\nExiting..."
+                exit
+            end
+
             if task_name
                 begin
                     selected_task = Orocos.get(task_name)
