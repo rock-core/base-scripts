@@ -1,5 +1,43 @@
 # Rock-specific shell functions
 # 
+function rock-find-root() {
+    local __resultvar=$1
+
+    # Allow to set the ROCK_ROOT_DIR externally
+    # to avoid complete dependence upon finding the env.sh
+    if [ "$ROCK_ROOT_DIR" = "" ]; then
+        local ROCK_ROOT_DIR=""
+        if [ -e "$PWD/env.sh" ]; then
+            ROCK_ROOT_DIR=$PWD
+        else
+            ROCK_ROOT_DIR=`echo $PWD`
+            while [ true ]; do
+                if [ "$ROCK_ROOT_DIR" = "" ]; then
+                    break
+                fi
+
+                ROCK_ROOT_DIR=`echo $ROCK_ROOT_DIR | sed 's/\(.*\)\/[^\/]*/\1/g'`
+
+                if [ -e "$ROCK_ROOT_DIR/env.sh" ]; then
+                    break
+                fi
+            done
+        fi
+    fi
+
+    eval $__resultvar="${ROCK_ROOT_DIR}"
+}
+
+function rock-source-env() {
+    rock-find-root DIR
+    if [ -d "${DIR}" ]; then
+        echo "Sourcing ${DIR}/env.sh"
+        source ${DIR}/env.sh
+    else
+        echo "Warning: no env.sh found"
+    fi
+}
+
 # The bundle support requires the base/scripts package to be installed
 function rock-bundle-sel() {
     if ! test -f $AUTOPROJ_CURRENT_ROOT/.bundle_env.sh; then
