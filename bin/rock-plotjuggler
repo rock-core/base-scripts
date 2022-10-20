@@ -1,0 +1,132 @@
+#!/usr/bin/env ruby
+require 'rock/bundles'
+require 'vizkit'
+require 'json'
+require 'websocket-client-simple'
+require 'optparse'
+require 'orocos'
+require 'rock/cli'
+require 'tty-cursor'
+require 'tty-table'
+
+options = Hash.new
+orocos_host = "127.0.0.1"
+$websocket = "ws://localhost:9871"
+
+connect_ports = Array.new
+
+optparse = OptionParser.new do |opts|
+    opts.banner = "usage: plotjuggler -t <task-name> -p <port-name>"
+
+    opts.on('--host=HOST', String) do |host|
+        orocos_host = host
+    end
+
+    opts.on('--websocket=ADDR', String, "ws://localhost:9871") do |addr|
+        puts "setting websocket #{addr}"
+        $websocket = addr
+    end
+
+    opts.on("-t","--task TASK","task name") do |t|
+        options[:task_name] = t
+    end
+
+    opts.on("-p","--port PORT","port name") do |p|
+        options[:port_name] = p
+    end
+
+    opts.on("-c","--connect TASK.PORT","task and port name to connect on startup") do |c|
+        connect_ports << c
+    end
+
+    opts.on_tail("-h","--help", "Show this message") do
+        puts opts
+        exit
+    end
+end
+task_name, port_name = optparse.parse(ARGV)
+
+
+
+Orocos.initialize
+Orocos::Async.name_service << Orocos::Async::CORBA::NameService.new(orocos_host)
+
+$connected = false
+$ws = nil
+
+def connect_ws()
+    $ws = nil
+    while $ws == nil do
+        begin
+            $ws = WebSocket::Client::Simple.connect $websocket
+        rescue
+            puts "waiting for plotjuggler json websocket: #{$websocket} '$> plotjuggler --start_streamer websocket'"
+            sleep 1
+        end
+    end
+    $ws.on :open do |event|
+        puts "socket connected"
+        $connected = true
+    end
+    $ws.on :close do |event|
+        puts "socket disconnected, reconnecting"
+        $connected = false
+        connect_ws
+    end
+end
+
+def connect_port(normalport)
+    #task = Orocos::Async.proxy(taskname)
+    puts "\nconnecting "+ normalport.task.name+"."+normalport.name+"\n"
+    port = normalport.to_async
+        port.on_raw_data do |data|
+            if ($connected) then
+                result = Hash.new
+                result[normalport.task.name]= Hash.new
+                result[normalport.task.name][normalport.name] = data.to_json_value(special_float_values: :string)
+                $ws.send(result.to_json)
+            else
+                puts "not connected"
+            end
+        end
+end
+
+
+connect_ws()
+
+add_mutex = Mutex.new
+
+connect_ports.each do |connect|
+    names = connect.split('.')
+    task = Orocos::Async.proxy(names[0])
+    port = task.port(names[1])
+    add_mutex.synchronize {
+        connect_port port
+    }
+end
+
+run = true
+thr = Thread.new {
+    while (run) do
+        begin
+            port = Rock::CLI.choose_orocos_task_and_port(task_name: options[:task_name] || task_name, port_name: options[:port_name] || port_name)
+        rescue
+            run=false
+        end
+        if port then
+            add_mutex.synchronize {
+                connect_port port
+            }
+        else
+            run=false
+        end
+    end
+}
+
+while (run) do
+    add_mutex.synchronize {
+        Vizkit.step
+    }
+    sleep 0.001
+end
+
