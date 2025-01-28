@@ -1,30 +1,8 @@
 #! /bin/sh
 
-set -e
-
-path=$1
-if test -z "$path"; then
-    echo "usage: rock-create-bundle dirname"
-    exit 1
-fi
-if test -e "$path"; then
-    echo "$path already exists"
-    exit 1
-fi
-
-base_dir=`dirname $path`
-if test -n "$base_dir"; then
-    mkdir -p $base_dir
-    name=`basename $path`
-else
-    name=$path
-fi
-
-if test -z "$ROCK_TEMPLATE_PREFIX"; then
-    ROCK_TEMPLATE_PREFIX=https://github.com/rock-core/base-templates-
-    ROCK_TEMPLATE_SUFFIX=.git
-fi
-git clone ${ROCK_TEMPLATE_PREFIX}bundle${ROCK_TEMPLATE_SUFFIX} $path
-cd $path
-./config.sh $name
-
+echo "The rock-create-bundle script is obsolete"
+echo "To create a Syskit-enabled bundle, follow instructions from"
+echo "  https://www.rock-robotics.org/rock-and-syskit/basics/getting_started.html"
+echo
+echo "Then read the following page to add it to your workspace"
+echo "  https://www.rock-robotics.org/rock-and-syskit/basics/publishing.html"
